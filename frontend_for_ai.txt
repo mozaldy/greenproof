@@ -107,33 +107,7 @@
   animation: fade-up 0.35s ease both;
 }
 
-// === File: apps/dashboard/src/app/layout.tsx ===
-
-import type { Metadata } from 'next'
-import './globals.css'
-
-export const metadata: Metadata = {
-  title: 'GreenProof Dashboard',
-  description: 'Platform manajemen validasi lapangan perkebunan',
-}
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="id" className="dark">
-      <body>{children}</body>
-    </html>
-  )
-}
-
-// === File: apps/dashboard/src/app/page.tsx ===
-
-import { redirect } from 'next/navigation'
-
-export default function RootPage() {
-  redirect('/dashboard')
-}
-
-// === File: apps/dashboard/src/app/dashboard/layout.tsx ===
+// === File: apps/dashboard/src/app/(operator)/layout.tsx ===
 
 import { Sidebar } from '@/components/dashboard/sidebar'
 
@@ -148,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 }
 
-// === File: apps/dashboard/src/app/dashboard/page.tsx ===
+// === File: apps/dashboard/src/app/(operator)/page.tsx ===
 
 // === File: apps/dashboard/src/app/dashboard/page.tsx ===
 'use client'
@@ -160,9 +134,9 @@ import {
   AlertTriangle, CheckCircle2, ChevronRight, Cpu, Database, Globe,
   Radio, Server, ScanLine, Wind, Layers, Zap, Clock
 } from 'lucide-react'
-import { StatCard } from '@/components/ui/StatCard'
-import { Badge } from '@/components/ui/Badge'
-import { LiveDot } from '@/components/ui/LiveDot'
+import { StatCard } from '@/components/ui/stat-card'
+import { Badge } from '@/components/ui/badge'
+import { LiveDot } from '@/components/ui/live-dot'
 import { BatteryIcon } from '@/components/dashboard/icons' // Assume battery icon is extracted
 import { DRONE_FLEET, ANOMALY_FEED, SYSTEM_NODES, ESTATES, SEVERITY, DRONE_STATUS, NODE_STATUS } from '@/lib/mock-data' // Move constants to a separate file
 
@@ -182,13 +156,13 @@ export default function CommandCenterPage() {
 
   const timeStr = time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const dateStr = time.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  
+
   const sysLabel = SYSTEM_NODES.some(n => n.status === 'degraded') ? 'DEGRADED' : 'OPERATIONAL'
   const sysColor = sysLabel === 'OPERATIONAL' ? '#10b981' : '#eab308'
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)', display: 'flex', flexDirection: 'column' }}>
-      
+
       {/* ── Sticky Header ─────────────────────────────────────────── */}
       <header className="px-6 py-3 sticky top-0 z-20 flex items-center justify-between gap-6" style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
         <div>
@@ -229,11 +203,11 @@ export default function CommandCenterPage() {
 
       {/* ── Main Grid ─────────────────────────────────────────────── */}
       <div className="flex-1 grid grid-cols-[1fr_340px] min-h-0">
-        
+
         {/* LEFT: Map */}
         <div className="flex flex-col border-r border-[var(--border)]">
-           {/* Map Implementation (unchanged logic, removed for brevity) */}
-           <div className="flex-1 relative min-h-0"><DroneCommandMap /></div>
+          {/* Map Implementation (unchanged logic, removed for brevity) */}
+          <div className="flex-1 relative min-h-0"><DroneCommandMap /></div>
         </div>
 
         {/* RIGHT: Monitoring panels */}
@@ -267,7 +241,7 @@ export default function CommandCenterPage() {
           {/* Anomaly Feed */}
           <section>
             <div className="px-4 py-2.5 flex items-center justify-between bg-[var(--bg-surface)] border-b border-[var(--border)]">
-               <div className="flex items-center gap-2 font-bold text-xs"><AlertTriangle size={13} color="#f97316" /> Live Alert Feed</div>
+              <div className="flex items-center gap-2 font-bold text-xs"><AlertTriangle size={13} color="#f97316" /> Live Alert Feed</div>
             </div>
             <div className="divide-y divide-[var(--border-subtle)]">
               {ANOMALY_FEED.map(a => {
@@ -296,7 +270,7 @@ export default function CommandCenterPage() {
     </div>
   )
 }
-// === File: apps/dashboard/src/app/dashboard/tasks/page.tsx ===
+// === File: apps/dashboard/src/app/(operator)/tasks/page.tsx ===
 
 // === File: apps/dashboard/src/app/dashboard/tasks/page.tsx ===
 'use client'
@@ -305,7 +279,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { TaskDetailModal } from '@/components/dashboard/task-detail-modal'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Badge } from '@/components/ui/Badge'
+import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Filter, Zap, Cpu, Eye, MoreHorizontal } from 'lucide-react'
 import { ALL_TASKS, STATUS_META, TYPE_META, ALL_STATUSES } from '@/lib/mock-data' // Extracted mocks
 
@@ -326,10 +300,10 @@ export default function TasksPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-      
-      <PageHeader 
-        title="Manajemen Task" 
-        subtitle={`${filtered.length} task ditemukan`} 
+
+      <PageHeader
+        title="Manajemen Task"
+        subtitle={`${filtered.length} task ditemukan`}
         rightContent={
           <>
             <Link href="/dashboard/simulator" className="flex items-center gap-2 px-3 py-2 rounded border text-xs font-semibold no-underline transition-colors" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--accent)' }}>
@@ -339,7 +313,7 @@ export default function TasksPage() {
               <Plus size={13} /> BUAT TASK BARU
             </button>
           </>
-        } 
+        }
       />
 
       <div className="px-8 py-6">
@@ -362,9 +336,8 @@ export default function TasksPage() {
               <button
                 key={s}
                 onClick={() => { setStatusFilter(s); setPage(0) }}
-                className={`px-3 py-1 text-[11px] font-medium rounded border cursor-pointer ${
-                  statusFilter === s ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]' : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border-[var(--border)]'
-                }`}
+                className={`px-3 py-1 text-[11px] font-medium rounded border cursor-pointer ${statusFilter === s ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]' : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border-[var(--border)]'
+                  }`}
               >
                 {s === 'Semua' ? 'Semua' : STATUS_META[s]?.label ?? s}
               </button>
@@ -381,7 +354,7 @@ export default function TasksPage() {
           {paginated.map((task, i) => {
             const status = STATUS_META[task.status]
             const type = TYPE_META[task.type]
-            
+
             return (
               <div key={task.id} onClick={() => setSelectedTask(task.id)} className="grid px-4 py-3 items-center hover:bg-[var(--bg-hover)] transition-colors cursor-pointer border-b border-[var(--border-subtle)] last:border-b-0" style={{ gridTemplateColumns: '80px 1fr 130px 120px 80px 100px 50px' }}>
                 <span className="font-mono text-[11px] text-[var(--text-muted)]">{task.id}</span>
@@ -411,7 +384,460 @@ export default function TasksPage() {
     </div>
   )
 }
-// === File: apps/dashboard/src/app/dashboard/simulator/page.tsx ===
+// === File: apps/dashboard/src/app/(operator)/drones/page.tsx ===
+
+'use client'
+
+import { useState } from 'react'
+import { Cpu, Plus, Signal, Battery, Box, Map, CheckCircle2, ChevronRight, PlaySquare } from 'lucide-react'
+
+// Mock Data Drones
+const DRONES = [
+  { id: 'DRN-X101', name: 'Alpha Scout', type: 'DJI Matrice 300 RTK', status: 'ACTIVE', battery: 84, signal: 'Kuat', estate: 'Kapuas Barat', model: 'GP-Vision-v2.1', lastUpdate: 'Live' },
+  { id: 'DRN-X102', name: 'Beta Observer', type: 'DJI Mavic 3 Multispectral', status: 'CHARGING', battery: 100, signal: '-', estate: 'Basecamp Utama', model: 'GP-Vision-v2.1', lastUpdate: '2 jam lalu' },
+  { id: 'DRN-X104', name: 'Delta Mapper', type: 'DJI Matrice 350 RTK', status: 'ACTIVE', battery: 42, signal: 'Sedang', estate: 'Kapuas Timur', model: 'GP-Vision-v2.1', lastUpdate: 'Live' },
+  { id: 'DRN-X105', name: 'Echo Patrol', type: 'Autel Evo Max 4T', status: 'MAINTENANCE', battery: 0, signal: '-', estate: 'Workshop', model: 'GP-NDVI-Beta', lastUpdate: '2 hari lalu' },
+]
+
+export default function DroneManagementPage() {
+  const [showRegModal, setShowRegModal] = useState(false)
+
+  const activeDrones = DRONES.filter(d => d.status === 'ACTIVE').length
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: 'var(--bg-base)' }}>
+      {/* ── Header ─────────────────────────────────────────── */}
+      <header className="px-8 py-5 shrink-0 flex items-center justify-between" style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
+        <div>
+          <h1 className="flex items-center gap-2" style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            <Cpu size={20} style={{ color: 'var(--primary)' }} /> Armada Drone
+          </h1>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+            Manajemen unit registrasi, monitor telemetri lokasi, dan konfigurasi Model AI Inference.
+          </p>
+        </div>
+        <button 
+          onClick={() => setShowRegModal(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg" 
+          style={{ background: 'var(--primary)', border: 'none', color: 'var(--text-inverse)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
+        >
+          <Plus size={16} /> REGISTRASI DRONE BARU
+        </button>
+      </header>
+
+      {/* ── Main Workspace ─────────────────────────────────── */}
+      <div className="p-8 flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-8 content-start">
+        
+        {/* Left Col: KPI & Models */}
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-xl p-5 border shadow-sm" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Unit Sedang Mengudara</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700, color: 'var(--primary)', marginTop: 8, lineHeight: 1 }}>{activeDrones}</div>
+            </div>
+            <div className="rounded-xl p-5 border shadow-sm" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Armada Terdaftar</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginTop: 8, lineHeight: 1 }}>{DRONES.length}</div>
+            </div>
+          </div>
+
+          <div className="rounded-xl overflow-hidden border shadow-sm" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+            <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+              <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>AI Inference Models</h3>
+            </div>
+            <div className="p-5 flex flex-col gap-4">
+              <div className="flex flex-col gap-2 p-3 rounded-lg" style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary-border)' }}>
+                <div className="flex items-center justify-between">
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>GP-Vision-v2.1</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--primary)', color: '#fff' }}>STABLE</span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>Model defisiensi dan hama standar. Digunakan oleh 3 drone.</div>
+              </div>
+              <div className="flex flex-col gap-2 p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+                <div className="flex items-center justify-between">
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>GP-NDVI-Beta</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-active)', color: 'var(--text-muted)' }}>EXPERIMENTAL</span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>Model analisis NDVI spektral untuk air dan biomass.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Col: Fleet List Area */}
+        <div className="lg:col-span-2 rounded-xl overflow-hidden border shadow-sm flex flex-col" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+            <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Status Armada & Lokasi Terkini</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {DRONES.map((drone, i) => {
+              const isActive = drone.status === 'ACTIVE'
+              return (
+                <div key={drone.id} className="flex items-center px-6 py-4 hover:bg-[var(--bg-hover)] transition-colors" style={{ borderBottom: i < DRONES.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                  
+                  {/* Icon & Name */}
+                  <div className="flex items-center gap-4 w-1/3 min-w-0">
+                    <div className="relative w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: isActive ? 'var(--primary-muted)' : 'var(--bg-elevated)', border: `1px solid ${isActive ? 'var(--primary-border)' : 'var(--border)'}` }}>
+                      {isActive ? <PlaySquare size={16} className="text-[var(--primary)]" /> : <Box size={16} className="text-[var(--text-muted)]" />}
+                      {isActive && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-[var(--bg-surface)]" />}
+                    </div>
+                    <div className="min-w-0">
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{drone.name}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{drone.id}</span>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-secondary)' }}>{drone.type}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vitals */}
+                  <div className="w-1/4 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Battery size={14} style={{ color: drone.battery > 50 ? '#10b981' : drone.battery > 20 ? '#eab308' : '#ef4444' }} />
+                      <div className="w-20 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                        <div className="h-full" style={{ width: `${drone.battery}%`, background: drone.battery > 50 ? '#10b981' : drone.battery > 20 ? '#eab308' : '#ef4444' }} />
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{drone.battery}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Signal size={14} style={{ color: isActive ? '#10b981' : 'var(--text-muted)' }} />
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: isActive ? '#10b981' : 'var(--text-muted)', fontWeight: 600 }}>Signal {drone.signal}</span>
+                    </div>
+                  </div>
+
+                  {/* Location & AI */}
+                  <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                      <Map size={13} style={{ color: 'var(--primary)' }} /> {drone.estate}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                       <Cpu size={12} /> {drone.model} • <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9 }}>{drone.lastUpdate}</span>
+                    </div>
+                  </div>
+
+                  {/* Action */}
+                  <button className="w-8 h-8 rounded shrink-0 flex items-center justify-center hover:bg-[var(--bg-elevated)] transition-colors border border-transparent hover:border-[var(--border)]" style={{ color: 'var(--text-muted)' }}>
+                    <ChevronRight size={18} />
+                  </button>
+
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Registration Modal Overlay Placeholder */}
+      {showRegModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setShowRegModal(false)}>
+          <div className="w-full max-w-md rounded-xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Registrasi Drone Baru</h2>
+            
+            <div className="flex flex-col gap-4">
+              <div>
+                <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: 4 }}>ID Registrasi (Serial Number)</label>
+                <input type="text" className="w-full px-3 py-2 rounded-lg" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: 13 }} placeholder="Contoh: DRN-Z999" />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: 4 }}>Tipe / Merk Drone</label>
+                <select className="w-full px-3 py-2 rounded-lg" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', fontSize: 13, outline: 'none' }}>
+                  <option>DJI Matrice 350 RTK</option>
+                  <option>DJI Mavic 3 Multispectral</option>
+                  <option>Autel Evo Max 4T</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: 4 }}>Model Inference Bawaan</label>
+                <select className="w-full px-3 py-2 rounded-lg" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', fontSize: 13, outline: 'none' }}>
+                  <option>GP-Vision-v2.1 (STABLE)</option>
+                  <option>GP-NDVI-Beta (EXPERIMENTAL)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+              <button onClick={() => setShowRegModal(false)} className="px-4 py-2 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Batal</button>
+              <button onClick={() => setShowRegModal(false)} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{ background: 'var(--primary)', border: 'none', color: 'var(--text-inverse)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                <CheckCircle2 size={14} /> Daftarkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// === File: apps/dashboard/src/app/(operator)/config/page.tsx ===
+
+'use client'
+
+import { useState } from 'react'
+import { Settings, Save, Shield, Cpu, Eye, Lock } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+import { Toggle } from '@/components/ui/toggle'
+import { REWARD_CONFIG, ACCESS_LOGS } from '@/lib/mock-data' // Assuming moved to Phase 1 mock data
+
+export default function ConfigPage() {
+  const [aiMode, setAiMode] = useState<'A' | 'B'>('B')
+  const [permissions, setPermissions] = useState({ readPhotos: true, fineTuning: true })
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+      <PageHeader 
+        title="Konfigurasi" 
+        subtitle="Pengaturan reward, model AI, dan akses data" 
+        icon={Settings} 
+      />
+
+      <div className="px-8 py-6 max-w-5xl flex flex-col gap-6">
+        
+        {/* Section 2: AI Model Configuration (Refactored) */}
+        <section className="rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--bg-surface)]">
+          <div className="px-5 py-3 flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+            <Cpu size={14} className="text-[var(--primary)]" />
+            <h2 className="font-sans text-sm font-bold text-[var(--text-primary)]">Konfigurasi Model AI</h2>
+          </div>
+          
+          <div className="p-5 flex flex-col gap-5">
+            {/* Toggles using our new component */}
+            <div>
+              <div className="font-sans text-[10px] font-bold tracking-widest uppercase text-[var(--text-muted)] mb-2">Izin yang Diberikan</div>
+              <div className="flex flex-col border border-[var(--border)] rounded-lg bg-[var(--bg-base)] px-4">
+                 <Toggle 
+                   label="AI GreenProof dapat membaca foto validasi untuk training" 
+                   desc="Digunakan untuk meningkatkan akurasi Computer Vision."
+                   on={permissions.readPhotos} 
+                   onChange={() => setPermissions(p => ({...p, readPhotos: !p.readPhotos}))} 
+                 />
+                 <Toggle 
+                   label="Fine-tuning regional (Kalimantan Tengah)" 
+                   desc="Menyesuaikan bobot model dengan topografi lokal."
+                   on={permissions.fineTuning} 
+                   onChange={() => setPermissions(p => ({...p, fineTuning: !p.fineTuning}))} 
+                 />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--danger-muted)] border border-[rgba(224,92,92,0.3)] text-[var(--danger)] font-sans text-xs font-semibold cursor-pointer">
+                <Lock size={12} /> Cabut Akses AI GreenProof
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  )
+}
+// === File: apps/dashboard/src/app/(operator)/audit/page.tsx ===
+
+'use client'
+
+import { useState } from 'react'
+import {
+  Download,
+  Filter,
+  Search,
+  CheckCircle2,
+  AlertTriangle,
+  Send,
+  Shield,
+  Zap,
+  Clock,
+  FileText,
+  Camera,
+  Eye,
+} from 'lucide-react'
+
+// ─── Mock audit data ────────────────────────────────────────────────────────
+
+const AUDIT_LOG = [
+  { id: 'AL-047', time: '15 Mar, 08:01', event: 'POIN_DISTRIBUTED',  task: 'TK-2847', detail: '150 poin didistribusikan ke Pak Surya',          actor: 'System', estate: 'KB', icon: Zap, color: 'var(--accent)' },
+  { id: 'AL-046', time: '15 Mar, 07:58', event: 'QC_PASS',           task: 'TK-2847', detail: 'LLM Quality Gate — LULUS (94%)',                actor: 'AI GreenProof',  estate: 'KB', icon: Shield, color: 'var(--primary)' },
+  { id: 'AL-045', time: '15 Mar, 07:53', event: 'SUBMISSION_RECEIVED', task: 'TK-2847', detail: 'Submission dari Pak Surya (L3) — 5 foto + video', actor: 'Pak Surya', estate: 'KB', icon: Camera, color: 'var(--info)' },
+  { id: 'AL-044', time: '15 Mar, 07:00', event: 'TASK_PUBLISHED',    task: 'TK-2847', detail: 'Task Deteksi Ganoderma diterbitkan — KB-C3',    actor: 'Andi (Operator)', estate: 'KB', icon: Send, color: 'var(--primary)' },
+  { id: 'AL-043', time: '14 Mar, 16:22', event: 'AI_ACCESS',         task: 'TK-2844', detail: 'AI GreenProof — 3 foto (Inference)',             actor: 'AI GreenProof',  estate: 'MT', icon: Eye, color: 'var(--warning)' },
+  { id: 'AL-042', time: '14 Mar, 15:30', event: 'FLAGGED',           task: 'TK-2849', detail: 'Task di-flag — disagreement antar mitra',       actor: 'LLM Quality Gate', estate: 'KB', icon: AlertTriangle, color: 'var(--danger)' },
+  { id: 'AL-041', time: '14 Mar, 14:20', event: 'SUBMISSION_RECEIVED', task: 'TK-2849', detail: 'Submission dari Wahyu Santoso (L1) — 2 foto',  actor: 'Wahyu Santoso', estate: 'KB', icon: Camera, color: 'var(--info)' },
+  { id: 'AL-040', time: '14 Mar, 12:47', event: 'SUBMISSION_RECEIVED', task: 'TK-2849', detail: 'Submission dari Agus Mulyono (L2) — 4 foto',   actor: 'Agus Mulyono', estate: 'KB', icon: Camera, color: 'var(--info)' },
+  { id: 'AL-039', time: '14 Mar, 11:00', event: 'TASK_PUBLISHED',    task: 'TK-2849', detail: 'Task Kondisi Umum Area diterbitkan — KB-D2',    actor: 'Andi (Operator)', estate: 'KB', icon: Send, color: 'var(--primary)' },
+  { id: 'AL-038', time: '14 Mar, 10:50', event: 'TASK_PUBLISHED',    task: 'TK-2850', detail: 'Task Anomali Drainase diterbitkan — KT-B1',     actor: 'Andi (Operator)', estate: 'KT', icon: Send, color: 'var(--primary)' },
+  { id: 'AL-037', time: '14 Mar, 10:15', event: 'POIN_DISTRIBUTED',  task: 'TK-2848', detail: '50 poin didistribusikan ke Bu Dewi',               actor: 'System', estate: 'KB', icon: Zap, color: 'var(--accent)' },
+  { id: 'AL-036', time: '14 Mar, 09:30', event: 'QC_PASS',           task: 'TK-2848', detail: 'LLM Quality Gate — LULUS (88%)',                actor: 'AI GreenProof',  estate: 'KB', icon: Shield, color: 'var(--primary)' },
+  { id: 'AL-035', time: '14 Mar, 08:15', event: 'SUBMISSION_RECEIVED', task: 'TK-2848', detail: 'Submission dari Bu Dewi (L2) — 3 foto',        actor: 'Bu Dewi', estate: 'KB', icon: Camera, color: 'var(--info)' },
+  { id: 'AL-034', time: '13 Mar, 14:00', event: 'VERDICT_SUBMITTED', task: 'TK-2846', detail: 'Verdict agronomis — Kondisi Normal',            actor: 'Siti Rahayu',    estate: 'KB', icon: CheckCircle2, color: 'var(--primary)' },
+  { id: 'AL-033', time: '13 Mar, 11:30', event: 'TASK_PUBLISHED',    task: 'TK-2846', detail: 'Task Survei Kondisi diterbitkan — KB-E2',       actor: 'Andi (Operator)', estate: 'KB', icon: Send, color: 'var(--primary)' },
+]
+
+const EVENT_TYPES = ['Semua', 'TASK_PUBLISHED', 'SUBMISSION_RECEIVED', 'QC_PASS', 'FLAGGED', 'POIN_DISTRIBUTED', 'AI_ACCESS', 'VERDICT_SUBMITTED']
+const ESTATE_FILTER = ['Semua', 'KB', 'KT', 'MT']
+
+const EVENT_LABELS: Record<string, string> = {
+  TASK_PUBLISHED: 'Task Published',
+  SUBMISSION_RECEIVED: 'Submission',
+  QC_PASS: 'QC Pass',
+  FLAGGED: 'Flagged',
+  POIN_DISTRIBUTED: 'Poin Distributed',
+  AI_ACCESS: 'AI Access',
+  VERDICT_SUBMITTED: 'Verdict',
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+export default function AuditPage() {
+  const [search, setSearch] = useState('')
+  const [eventFilter, setEventFilter] = useState('Semua')
+  const [estateFilter, setEstateFilter] = useState('Semua')
+
+  const filtered = AUDIT_LOG.filter(l => {
+    const matchSearch = !search || l.detail.toLowerCase().includes(search.toLowerCase()) || l.task.toLowerCase().includes(search.toLowerCase())
+    const matchEvent = eventFilter === 'Semua' || l.event === eventFilter
+    const matchEstate = estateFilter === 'Semua' || l.estate === estateFilter
+    return matchSearch && matchEvent && matchEstate
+  })
+
+  const handleExport = () => {
+    const csv = [
+      'ID,Waktu,Event,Task,Detail,Aktor,Estate',
+      ...filtered.map(l => `${l.id},"${l.time}",${l.event},${l.task},"${l.detail}",${l.actor},${l.estate}`)
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'audit_log.csv'
+    a.click()
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+
+      {/* Header */}
+      <header className="flex items-center justify-between px-8 py-4 sticky top-0 z-10" style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '-0.02em' }}>
+            Audit Log
+          </h1>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+            {filtered.length} entri ditemukan
+          </p>
+        </div>
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg"
+          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}
+        >
+          <Download size={13} /> Export CSV
+        </button>
+      </header>
+
+      <div className="px-8 py-6">
+
+        {/* Filters */}
+        <div className="flex items-center gap-3 mb-5 flex-wrap">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', flex: 1, minWidth: 200, maxWidth: 320 }}>
+            <Search size={14} style={{ color: 'var(--text-muted)' }} />
+            <input
+              placeholder="Cari log..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-primary)', width: '100%' }}
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Filter size={12} style={{ color: 'var(--text-muted)' }} />
+            {EVENT_TYPES.map(e => (
+              <button
+                key={e}
+                onClick={() => setEventFilter(e)}
+                className="px-2.5 py-1 rounded"
+                style={{
+                  background: eventFilter === e ? 'var(--primary-muted)' : 'var(--bg-elevated)',
+                  border: `1px solid ${eventFilter === e ? 'var(--primary-border)' : 'var(--border)'}`,
+                  fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600,
+                  color: eventFilter === e ? 'var(--primary)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                {e === 'Semua' ? 'Semua' : EVENT_LABELS[e] ?? e}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {ESTATE_FILTER.map(e => (
+              <button
+                key={e}
+                onClick={() => setEstateFilter(e)}
+                className="px-2.5 py-1 rounded"
+                style={{
+                  background: estateFilter === e ? 'var(--info-muted)' : 'var(--bg-elevated)',
+                  border: `1px solid ${estateFilter === e ? 'rgba(92,168,224,0.3)' : 'var(--border)'}`,
+                  fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600,
+                  color: estateFilter === e ? 'var(--info)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+          {filtered.map((entry, i) => {
+            const Icon = entry.icon
+            return (
+              <div key={entry.id} className="flex px-5 py-4 gap-4" style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
+                {/* Timeline dot + line */}
+                <div className="flex flex-col items-center" style={{ width: 28 }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: `${entry.color}22`, border: `1px solid ${entry.color}44` }}>
+                    <Icon size={12} style={{ color: entry.color }} />
+                  </div>
+                  {i < filtered.length - 1 && <div className="flex-1 w-px mt-1" style={{ background: 'var(--border)' }} />}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{entry.time}</span>
+                    <span className="px-1.5 py-0.5 rounded" style={{ fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', color: entry.color, background: `${entry.color}18` }}>
+                      {EVENT_LABELS[entry.event] ?? entry.event}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{entry.task}</span>
+                    <span className="px-1 py-0.5 rounded" style={{ fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-elevated)' }}>
+                      {entry.estate}
+                    </span>
+                  </div>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-primary)', margin: 0 }}>
+                    {entry.detail}
+                  </p>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
+                    oleh {entry.actor}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {filtered.length === 0 && (
+            <div className="p-12 text-center">
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-muted)' }}>
+                Tidak ada log yang cocok dengan filter.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// === File: apps/dashboard/src/app/(operator)/simulator/page.tsx ===
 
 'use client'
 
@@ -1228,7 +1654,7 @@ function Field({
   )
 }
 
-// === File: apps/dashboard/src/app/dashboard/validators/page.tsx ===
+// === File: apps/dashboard/src/app/(operator)/validators/page.tsx ===
 
 'use client'
 
@@ -1429,695 +1855,25 @@ export default function ValidatorsPage() {
   )
 }
 
-// === File: apps/dashboard/src/app/dashboard/config/page.tsx ===
+// === File: apps/dashboard/src/app/(verifier)/layout.tsx ===
 
-'use client'
+import type { Metadata } from 'next'
+import './globals.css'
 
-import { useState } from 'react'
-import {
-  Settings,
-  Zap,
-  Shield,
-  Cpu,
-  Eye,
-  Lock,
-  Unlock,
-  Clock,
-  AlertTriangle,
-} from 'lucide-react'
+export const metadata: Metadata = {
+  title: 'GreenProof Dashboard',
+  description: 'Platform manajemen validasi lapangan perkebunan',
+}
 
-// ─── Reward settings ────────────────────────────────────────────────────────
-
-const REWARD_CONFIG = [
-  { type: 'Kondisi Umum Area',    defaultReward: 40,  criticalReward: null },
-  { type: 'Hitung Pohon',        defaultReward: 50,  criticalReward: null },
-  { type: 'Kualitas Pelepah',    defaultReward: 60,  criticalReward: null },
-  { type: 'Health Diagnosis',    defaultReward: 100, criticalReward: 150 },
-  { type: 'Anomali Drainase',    defaultReward: 80,  criticalReward: 120 },
-  { type: 'Anomali Semi-Kritikal', defaultReward: 120, criticalReward: 150 },
-  { type: 'Deteksi Ganoderma/BSR', defaultReward: 150, criticalReward: 200 },
-  { type: 'Estimasi Serangan Hama', defaultReward: 120, criticalReward: 200 },
-]
-
-// ─── Seal access logs ───────────────────────────────────────────────────────
-
-const ACCESS_LOGS = [
-  { date: '15 Mar 2025, 08:01', service: 'AI GreenProof Service', taskId: 'TK-2847', photos: 5, purpose: 'Training' },
-  { date: '14 Mar 2025, 16:22', service: 'AI GreenProof Service', taskId: 'TK-2844', photos: 3, purpose: 'Inference' },
-  { date: '13 Mar 2025, 09:15', service: 'AI GreenProof Service', taskId: 'TK-2839', photos: 4, purpose: 'Training' },
-  { date: '12 Mar 2025, 14:30', service: 'AI GreenProof Service', taskId: 'TK-2835', photos: 2, purpose: 'Inference' },
-  { date: '11 Mar 2025, 10:45', service: 'AI GreenProof Service', taskId: 'TK-2830', photos: 6, purpose: 'Training' },
-]
-
-// ─── Page ────────────────────────────────────────────────────────────────────
-
-export default function ConfigPage() {
-  const [aiMode, setAiMode] = useState<'A' | 'B'>('B')
-  const [permissions, setPermissions] = useState({
-    readPhotos: true,
-    fineTuning: true,
-  })
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-
-      {/* Header */}
-      <header
-        className="flex items-center justify-between px-8 py-5 sticky top-0 z-10"
-        style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
-      >
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Settings size={16} style={{ color: 'var(--text-muted)' }} />
-            <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '-0.02em' }}>
-              Konfigurasi
-            </h1>
-          </div>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-muted)' }}>
-            Pengaturan reward, model AI, dan akses data
-          </p>
-        </div>
-      </header>
-
-      <div className="px-8 py-6 max-w-5xl">
-
-        {/* ── Section 1: Reward Settings ────────────────────── */}
-        <div className="rounded-lg overflow-hidden mb-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-          <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-            <Zap size={14} style={{ color: 'var(--accent)' }} />
-            <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Pengaturan Reward per Tipe Task
-            </h2>
-          </div>
-          <div>
-            {/* Table head */}
-            <div
-              className="grid px-5 py-2"
-              style={{
-                gridTemplateColumns: '1fr 120px 120px 100px',
-                borderBottom: '1px solid var(--border)',
-              }}
-            >
-              {['Tipe Task', 'Reward Default', 'Reward Kritikal'].map(h => (
-                <div key={h} style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--text-muted)' }}>
-                  {h}
-                </div>
-              ))}
-            </div>
-            {/* Table rows */}
-            {REWARD_CONFIG.map((r, i) => (
-              <div
-                key={r.type}
-                className="grid px-5 py-3 items-center"
-                style={{
-                  gridTemplateColumns: '1fr 120px 120px 100px',
-                  borderBottom: i < REWARD_CONFIG.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                }}
-              >
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
-                  {r.type}
-                </span>
-                <span className="flex items-center gap-1" style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
-                  <Zap size={10} />{r.defaultReward} poin
-                </span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: r.criticalReward ? 'var(--danger)' : 'var(--text-muted)' }}>
-                  {r.criticalReward ? (
-                    <span className="flex items-center gap-1"><Zap size={10} />{r.criticalReward} poin</span>
-                  ) : '—'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Section 2: AI Model Configuration ────────────── */}
-        <div className="rounded-lg overflow-hidden mb-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-          <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-            <Cpu size={14} style={{ color: 'var(--primary)' }} />
-            <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Konfigurasi Model AI
-            </h2>
-          </div>
-          <div className="p-5">
-            {/* Mode selection */}
-            <div className="mb-5">
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--text-muted)', marginBottom: 8 }}>
-                Mode Aktif
-              </div>
-              <div className="flex gap-3">
-                {[
-                  { key: 'A' as const, label: 'Mode A — Model Sendiri', desc: 'Gunakan model AI milik perusahaan sendiri' },
-                  { key: 'B' as const, label: 'Mode B — Model GreenProof', desc: 'Gunakan model AI bersama dari GreenProof' },
-                ].map(m => (
-                  <button
-                    key={m.key}
-                    onClick={() => setAiMode(m.key)}
-                    className="flex-1 p-4 rounded-lg text-left"
-                    style={{
-                      background: aiMode === m.key ? 'var(--primary-muted)' : 'var(--bg-elevated)',
-                      border: `1px solid ${aiMode === m.key ? 'var(--primary-border)' : 'var(--border)'}`,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-3 h-3 rounded-full" style={{ border: `2px solid ${aiMode === m.key ? 'var(--primary)' : 'var(--text-muted)'}`, background: aiMode === m.key ? 'var(--primary)' : 'transparent' }} />
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: aiMode === m.key ? 'var(--primary)' : 'var(--text-secondary)' }}>
-                        {m.label}
-                      </span>
-                    </div>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-muted)', marginLeft: 20 }}>
-                      {m.desc}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Permissions */}
-            <div className="mb-5">
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--text-muted)', marginBottom: 8 }}>
-                Izin yang Diberikan
-              </div>
-              <div className="flex flex-col gap-2">
-                {[
-                  { key: 'readPhotos' as const, label: 'AI GreenProof dapat membaca foto validasi untuk training', icon: Eye },
-                  { key: 'fineTuning' as const, label: 'Fine-tuning regional (Kalimantan Tengah)', icon: Cpu },
-                ].map(p => (
-                  <button
-                    key={p.key}
-                    onClick={() => setPermissions(prev => ({ ...prev, [p.key]: !prev[p.key] }))}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-left"
-                    style={{
-                      background: 'var(--bg-elevated)',
-                      border: `1px solid ${permissions[p.key] ? 'var(--primary-border)' : 'var(--border)'}`,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: permissions[p.key] ? 'var(--primary)' : 'var(--bg-surface)', border: `1px solid ${permissions[p.key] ? 'var(--primary)' : 'var(--border)'}` }}>
-                      {permissions[p.key] && <span style={{ color: 'var(--text-inverse)', fontSize: 11 }}>✓</span>}
-                    </div>
-                    <p.icon size={13} style={{ color: permissions[p.key] ? 'var(--primary)' : 'var(--text-muted)' }} />
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: permissions[p.key] ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                      {p.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Revoke button */}
-            <div className="flex gap-2">
-              <button
-                className="flex items-center gap-2 px-4 py-2 rounded-lg"
-                style={{
-                  background: 'var(--danger-muted)',
-                  border: '1px solid rgba(224,92,92,0.3)',
-                  color: 'var(--danger)',
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                <Lock size={12} />
-                Cabut Akses AI GreenProof
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Section 3: Seal Access Logs ───────────────────── */}
-        <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-          <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-            <div className="flex items-center gap-2">
-              <Shield size={14} style={{ color: 'var(--info)' }} />
-              <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-                Log Akses Data (Seal)
-              </h2>
-            </div>
-            <button
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded"
-              style={{
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border)',
-                fontFamily: 'var(--font-sans)',
-                fontSize: 11,
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-              }}
-            >
-              <Eye size={10} />
-              Lihat Semua Log
-            </button>
-          </div>
-          <div>
-            {/* Table head */}
-            <div
-              className="grid px-5 py-2"
-              style={{
-                gridTemplateColumns: '200px 180px 100px 60px 100px',
-                borderBottom: '1px solid var(--border)',
-              }}
-            >
-              {['Waktu', 'Service', 'Task', 'Foto', 'Tujuan'].map(h => (
-                <div key={h} style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--text-muted)' }}>
-                  {h}
-                </div>
-              ))}
-            </div>
-            {ACCESS_LOGS.map((log, i) => (
-              <div
-                key={i}
-                className="grid px-5 py-3 items-center"
-                style={{
-                  gridTemplateColumns: '200px 180px 100px 60px 100px',
-                  borderBottom: i < ACCESS_LOGS.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                }}
-              >
-                <span className="flex items-center gap-1.5" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>
-                  <Clock size={10} />{log.date}
-                </span>
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>
-                  {log.service}
-                </span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>
-                  {log.taskId}
-                </span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)' }}>
-                  {log.photos}
-                </span>
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded w-fit"
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: log.purpose === 'Training' ? 'var(--primary)' : 'var(--info)',
-                    background: log.purpose === 'Training' ? 'var(--primary-muted)' : 'var(--info-muted)',
-                  }}
-                >
-                  {log.purpose}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    <html lang="id" className="dark">
+      <body>{children}</body>
+    </html>
   )
 }
 
-// === File: apps/dashboard/src/app/dashboard/audit/page.tsx ===
-
-'use client'
-
-import { useState } from 'react'
-import {
-  Download,
-  Filter,
-  Search,
-  CheckCircle2,
-  AlertTriangle,
-  Send,
-  Shield,
-  Zap,
-  Clock,
-  FileText,
-  Camera,
-  Eye,
-} from 'lucide-react'
-
-// ─── Mock audit data ────────────────────────────────────────────────────────
-
-const AUDIT_LOG = [
-  { id: 'AL-047', time: '15 Mar, 08:01', event: 'POIN_DISTRIBUTED',  task: 'TK-2847', detail: '150 poin didistribusikan ke Pak Surya',          actor: 'System', estate: 'KB', icon: Zap, color: 'var(--accent)' },
-  { id: 'AL-046', time: '15 Mar, 07:58', event: 'QC_PASS',           task: 'TK-2847', detail: 'LLM Quality Gate — LULUS (94%)',                actor: 'AI GreenProof',  estate: 'KB', icon: Shield, color: 'var(--primary)' },
-  { id: 'AL-045', time: '15 Mar, 07:53', event: 'SUBMISSION_RECEIVED', task: 'TK-2847', detail: 'Submission dari Pak Surya (L3) — 5 foto + video', actor: 'Pak Surya', estate: 'KB', icon: Camera, color: 'var(--info)' },
-  { id: 'AL-044', time: '15 Mar, 07:00', event: 'TASK_PUBLISHED',    task: 'TK-2847', detail: 'Task Deteksi Ganoderma diterbitkan — KB-C3',    actor: 'Andi (Operator)', estate: 'KB', icon: Send, color: 'var(--primary)' },
-  { id: 'AL-043', time: '14 Mar, 16:22', event: 'AI_ACCESS',         task: 'TK-2844', detail: 'AI GreenProof — 3 foto (Inference)',             actor: 'AI GreenProof',  estate: 'MT', icon: Eye, color: 'var(--warning)' },
-  { id: 'AL-042', time: '14 Mar, 15:30', event: 'FLAGGED',           task: 'TK-2849', detail: 'Task di-flag — disagreement antar mitra',       actor: 'LLM Quality Gate', estate: 'KB', icon: AlertTriangle, color: 'var(--danger)' },
-  { id: 'AL-041', time: '14 Mar, 14:20', event: 'SUBMISSION_RECEIVED', task: 'TK-2849', detail: 'Submission dari Wahyu Santoso (L1) — 2 foto',  actor: 'Wahyu Santoso', estate: 'KB', icon: Camera, color: 'var(--info)' },
-  { id: 'AL-040', time: '14 Mar, 12:47', event: 'SUBMISSION_RECEIVED', task: 'TK-2849', detail: 'Submission dari Agus Mulyono (L2) — 4 foto',   actor: 'Agus Mulyono', estate: 'KB', icon: Camera, color: 'var(--info)' },
-  { id: 'AL-039', time: '14 Mar, 11:00', event: 'TASK_PUBLISHED',    task: 'TK-2849', detail: 'Task Kondisi Umum Area diterbitkan — KB-D2',    actor: 'Andi (Operator)', estate: 'KB', icon: Send, color: 'var(--primary)' },
-  { id: 'AL-038', time: '14 Mar, 10:50', event: 'TASK_PUBLISHED',    task: 'TK-2850', detail: 'Task Anomali Drainase diterbitkan — KT-B1',     actor: 'Andi (Operator)', estate: 'KT', icon: Send, color: 'var(--primary)' },
-  { id: 'AL-037', time: '14 Mar, 10:15', event: 'POIN_DISTRIBUTED',  task: 'TK-2848', detail: '50 poin didistribusikan ke Bu Dewi',               actor: 'System', estate: 'KB', icon: Zap, color: 'var(--accent)' },
-  { id: 'AL-036', time: '14 Mar, 09:30', event: 'QC_PASS',           task: 'TK-2848', detail: 'LLM Quality Gate — LULUS (88%)',                actor: 'AI GreenProof',  estate: 'KB', icon: Shield, color: 'var(--primary)' },
-  { id: 'AL-035', time: '14 Mar, 08:15', event: 'SUBMISSION_RECEIVED', task: 'TK-2848', detail: 'Submission dari Bu Dewi (L2) — 3 foto',        actor: 'Bu Dewi', estate: 'KB', icon: Camera, color: 'var(--info)' },
-  { id: 'AL-034', time: '13 Mar, 14:00', event: 'VERDICT_SUBMITTED', task: 'TK-2846', detail: 'Verdict agronomis — Kondisi Normal',            actor: 'Siti Rahayu',    estate: 'KB', icon: CheckCircle2, color: 'var(--primary)' },
-  { id: 'AL-033', time: '13 Mar, 11:30', event: 'TASK_PUBLISHED',    task: 'TK-2846', detail: 'Task Survei Kondisi diterbitkan — KB-E2',       actor: 'Andi (Operator)', estate: 'KB', icon: Send, color: 'var(--primary)' },
-]
-
-const EVENT_TYPES = ['Semua', 'TASK_PUBLISHED', 'SUBMISSION_RECEIVED', 'QC_PASS', 'FLAGGED', 'POIN_DISTRIBUTED', 'AI_ACCESS', 'VERDICT_SUBMITTED']
-const ESTATE_FILTER = ['Semua', 'KB', 'KT', 'MT']
-
-const EVENT_LABELS: Record<string, string> = {
-  TASK_PUBLISHED: 'Task Published',
-  SUBMISSION_RECEIVED: 'Submission',
-  QC_PASS: 'QC Pass',
-  FLAGGED: 'Flagged',
-  POIN_DISTRIBUTED: 'Poin Distributed',
-  AI_ACCESS: 'AI Access',
-  VERDICT_SUBMITTED: 'Verdict',
-}
-
-// ─── Page ────────────────────────────────────────────────────────────────────
-
-export default function AuditPage() {
-  const [search, setSearch] = useState('')
-  const [eventFilter, setEventFilter] = useState('Semua')
-  const [estateFilter, setEstateFilter] = useState('Semua')
-
-  const filtered = AUDIT_LOG.filter(l => {
-    const matchSearch = !search || l.detail.toLowerCase().includes(search.toLowerCase()) || l.task.toLowerCase().includes(search.toLowerCase())
-    const matchEvent = eventFilter === 'Semua' || l.event === eventFilter
-    const matchEstate = estateFilter === 'Semua' || l.estate === estateFilter
-    return matchSearch && matchEvent && matchEstate
-  })
-
-  const handleExport = () => {
-    const csv = [
-      'ID,Waktu,Event,Task,Detail,Aktor,Estate',
-      ...filtered.map(l => `${l.id},"${l.time}",${l.event},${l.task},"${l.detail}",${l.actor},${l.estate}`)
-    ].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'audit_log.csv'
-    a.click()
-  }
-
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-8 py-4 sticky top-0 z-10" style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
-        <div>
-          <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '-0.02em' }}>
-            Audit Log
-          </h1>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-            {filtered.length} entri ditemukan
-          </p>
-        </div>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg"
-          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}
-        >
-          <Download size={13} /> Export CSV
-        </button>
-      </header>
-
-      <div className="px-8 py-6">
-
-        {/* Filters */}
-        <div className="flex items-center gap-3 mb-5 flex-wrap">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', flex: 1, minWidth: 200, maxWidth: 320 }}>
-            <Search size={14} style={{ color: 'var(--text-muted)' }} />
-            <input
-              placeholder="Cari log..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-primary)', width: '100%' }}
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <Filter size={12} style={{ color: 'var(--text-muted)' }} />
-            {EVENT_TYPES.map(e => (
-              <button
-                key={e}
-                onClick={() => setEventFilter(e)}
-                className="px-2.5 py-1 rounded"
-                style={{
-                  background: eventFilter === e ? 'var(--primary-muted)' : 'var(--bg-elevated)',
-                  border: `1px solid ${eventFilter === e ? 'var(--primary-border)' : 'var(--border)'}`,
-                  fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600,
-                  color: eventFilter === e ? 'var(--primary)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                }}
-              >
-                {e === 'Semua' ? 'Semua' : EVENT_LABELS[e] ?? e}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {ESTATE_FILTER.map(e => (
-              <button
-                key={e}
-                onClick={() => setEstateFilter(e)}
-                className="px-2.5 py-1 rounded"
-                style={{
-                  background: estateFilter === e ? 'var(--info-muted)' : 'var(--bg-elevated)',
-                  border: `1px solid ${estateFilter === e ? 'rgba(92,168,224,0.3)' : 'var(--border)'}`,
-                  fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600,
-                  color: estateFilter === e ? 'var(--info)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                }}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Timeline */}
-        <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-          {filtered.map((entry, i) => {
-            const Icon = entry.icon
-            return (
-              <div key={entry.id} className="flex px-5 py-4 gap-4" style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
-                {/* Timeline dot + line */}
-                <div className="flex flex-col items-center" style={{ width: 28 }}>
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: `${entry.color}22`, border: `1px solid ${entry.color}44` }}>
-                    <Icon size={12} style={{ color: entry.color }} />
-                  </div>
-                  {i < filtered.length - 1 && <div className="flex-1 w-px mt-1" style={{ background: 'var(--border)' }} />}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{entry.time}</span>
-                    <span className="px-1.5 py-0.5 rounded" style={{ fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', color: entry.color, background: `${entry.color}18` }}>
-                      {EVENT_LABELS[entry.event] ?? entry.event}
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{entry.task}</span>
-                    <span className="px-1 py-0.5 rounded" style={{ fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-elevated)' }}>
-                      {entry.estate}
-                    </span>
-                  </div>
-                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-primary)', margin: 0 }}>
-                    {entry.detail}
-                  </p>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
-                    oleh {entry.actor}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-
-          {filtered.length === 0 && (
-            <div className="p-12 text-center">
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-muted)' }}>
-                Tidak ada log yang cocok dengan filter.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// === File: apps/dashboard/src/app/dashboard/drones/page.tsx ===
-
-'use client'
-
-import { useState } from 'react'
-import { Cpu, Plus, Signal, Battery, Box, Map, CheckCircle2, ChevronRight, PlaySquare } from 'lucide-react'
-
-// Mock Data Drones
-const DRONES = [
-  { id: 'DRN-X101', name: 'Alpha Scout', type: 'DJI Matrice 300 RTK', status: 'ACTIVE', battery: 84, signal: 'Kuat', estate: 'Kapuas Barat', model: 'GP-Vision-v2.1', lastUpdate: 'Live' },
-  { id: 'DRN-X102', name: 'Beta Observer', type: 'DJI Mavic 3 Multispectral', status: 'CHARGING', battery: 100, signal: '-', estate: 'Basecamp Utama', model: 'GP-Vision-v2.1', lastUpdate: '2 jam lalu' },
-  { id: 'DRN-X104', name: 'Delta Mapper', type: 'DJI Matrice 350 RTK', status: 'ACTIVE', battery: 42, signal: 'Sedang', estate: 'Kapuas Timur', model: 'GP-Vision-v2.1', lastUpdate: 'Live' },
-  { id: 'DRN-X105', name: 'Echo Patrol', type: 'Autel Evo Max 4T', status: 'MAINTENANCE', battery: 0, signal: '-', estate: 'Workshop', model: 'GP-NDVI-Beta', lastUpdate: '2 hari lalu' },
-]
-
-export default function DroneManagementPage() {
-  const [showRegModal, setShowRegModal] = useState(false)
-
-  const activeDrones = DRONES.filter(d => d.status === 'ACTIVE').length
-
-  return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: 'var(--bg-base)' }}>
-      {/* ── Header ─────────────────────────────────────────── */}
-      <header className="px-8 py-5 shrink-0 flex items-center justify-between" style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
-        <div>
-          <h1 className="flex items-center gap-2" style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-            <Cpu size={20} style={{ color: 'var(--primary)' }} /> Armada Drone
-          </h1>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-            Manajemen unit registrasi, monitor telemetri lokasi, dan konfigurasi Model AI Inference.
-          </p>
-        </div>
-        <button 
-          onClick={() => setShowRegModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg" 
-          style={{ background: 'var(--primary)', border: 'none', color: 'var(--text-inverse)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
-        >
-          <Plus size={16} /> REGISTRASI DRONE BARU
-        </button>
-      </header>
-
-      {/* ── Main Workspace ─────────────────────────────────── */}
-      <div className="p-8 flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-8 content-start">
-        
-        {/* Left Col: KPI & Models */}
-        <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl p-5 border shadow-sm" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Unit Sedang Mengudara</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700, color: 'var(--primary)', marginTop: 8, lineHeight: 1 }}>{activeDrones}</div>
-            </div>
-            <div className="rounded-xl p-5 border shadow-sm" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Armada Terdaftar</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginTop: 8, lineHeight: 1 }}>{DRONES.length}</div>
-            </div>
-          </div>
-
-          <div className="rounded-xl overflow-hidden border shadow-sm" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-            <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-              <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>AI Inference Models</h3>
-            </div>
-            <div className="p-5 flex flex-col gap-4">
-              <div className="flex flex-col gap-2 p-3 rounded-lg" style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary-border)' }}>
-                <div className="flex items-center justify-between">
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>GP-Vision-v2.1</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--primary)', color: '#fff' }}>STABLE</span>
-                </div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>Model defisiensi dan hama standar. Digunakan oleh 3 drone.</div>
-              </div>
-              <div className="flex flex-col gap-2 p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div className="flex items-center justify-between">
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>GP-NDVI-Beta</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-active)', color: 'var(--text-muted)' }}>EXPERIMENTAL</span>
-                </div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>Model analisis NDVI spektral untuk air dan biomass.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Col: Fleet List Area */}
-        <div className="lg:col-span-2 rounded-xl overflow-hidden border shadow-sm flex flex-col" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-            <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Status Armada & Lokasi Terkini</h3>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {DRONES.map((drone, i) => {
-              const isActive = drone.status === 'ACTIVE'
-              return (
-                <div key={drone.id} className="flex items-center px-6 py-4 hover:bg-[var(--bg-hover)] transition-colors" style={{ borderBottom: i < DRONES.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                  
-                  {/* Icon & Name */}
-                  <div className="flex items-center gap-4 w-1/3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: isActive ? 'var(--primary-muted)' : 'var(--bg-elevated)', border: `1px solid ${isActive ? 'var(--primary-border)' : 'var(--border)'}` }}>
-                      {isActive ? <PlaySquare size={16} className="text-[var(--primary)]" /> : <Box size={16} className="text-[var(--text-muted)]" />}
-                      {isActive && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-[var(--bg-surface)]" />}
-                    </div>
-                    <div className="min-w-0">
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{drone.name}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{drone.id}</span>
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-secondary)' }}>{drone.type}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Vitals */}
-                  <div className="w-1/4 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <Battery size={14} style={{ color: drone.battery > 50 ? '#10b981' : drone.battery > 20 ? '#eab308' : '#ef4444' }} />
-                      <div className="w-20 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
-                        <div className="h-full" style={{ width: `${drone.battery}%`, background: drone.battery > 50 ? '#10b981' : drone.battery > 20 ? '#eab308' : '#ef4444' }} />
-                      </div>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{drone.battery}%</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Signal size={14} style={{ color: isActive ? '#10b981' : 'var(--text-muted)' }} />
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: isActive ? '#10b981' : 'var(--text-muted)', fontWeight: 600 }}>Signal {drone.signal}</span>
-                    </div>
-                  </div>
-
-                  {/* Location & AI */}
-                  <div className="flex-1 flex flex-col gap-1">
-                    <div className="flex items-center gap-1.5" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                      <Map size={13} style={{ color: 'var(--primary)' }} /> {drone.estate}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                       <Cpu size={12} /> {drone.model} • <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9 }}>{drone.lastUpdate}</span>
-                    </div>
-                  </div>
-
-                  {/* Action */}
-                  <button className="w-8 h-8 rounded shrink-0 flex items-center justify-center hover:bg-[var(--bg-elevated)] transition-colors border border-transparent hover:border-[var(--border)]" style={{ color: 'var(--text-muted)' }}>
-                    <ChevronRight size={18} />
-                  </button>
-
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Registration Modal Overlay Placeholder */}
-      {showRegModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setShowRegModal(false)}>
-          <div className="w-full max-w-md rounded-xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Registrasi Drone Baru</h2>
-            
-            <div className="flex flex-col gap-4">
-              <div>
-                <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: 4 }}>ID Registrasi (Serial Number)</label>
-                <input type="text" className="w-full px-3 py-2 rounded-lg" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: 13 }} placeholder="Contoh: DRN-Z999" />
-              </div>
-              <div>
-                <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: 4 }}>Tipe / Merk Drone</label>
-                <select className="w-full px-3 py-2 rounded-lg" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', fontSize: 13, outline: 'none' }}>
-                  <option>DJI Matrice 350 RTK</option>
-                  <option>DJI Mavic 3 Multispectral</option>
-                  <option>Autel Evo Max 4T</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: 4 }}>Model Inference Bawaan</label>
-                <select className="w-full px-3 py-2 rounded-lg" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', fontSize: 13, outline: 'none' }}>
-                  <option>GP-Vision-v2.1 (STABLE)</option>
-                  <option>GP-NDVI-Beta (EXPERIMENTAL)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-8 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-              <button onClick={() => setShowRegModal(false)} className="px-4 py-2 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Batal</button>
-              <button onClick={() => setShowRegModal(false)} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{ background: 'var(--primary)', border: 'none', color: 'var(--text-inverse)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                <CheckCircle2 size={14} /> Daftarkan
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// === File: apps/dashboard/src/app/verifier/page.tsx ===
+// === File: apps/dashboard/src/app/(verifier)/verifier/page.tsx ===
 
 'use client'
 
@@ -2721,7 +2477,7 @@ export default function VerifierPage() {
   )
 }
 
-// === File: apps/dashboard/src/app/verifier/layout.tsx ===
+// === File: apps/dashboard/src/app/(verifier)/verifier/layout.tsx ===
 
 import { VerifierSidebar } from '@/components/dashboard/verifier-sidebar'
 
@@ -2736,7 +2492,7 @@ export default function VerifierLayout({ children }: { children: React.ReactNode
   )
 }
 
-// === File: apps/dashboard/src/app/verifier/history/page.tsx ===
+// === File: apps/dashboard/src/app/(verifier)/verifier/history/page.tsx ===
 
 'use client'
 
@@ -2926,7 +2682,7 @@ export default function HistoryPage() {
   )
 }
 
-// === File: apps/dashboard/src/app/verifier/kb/page.tsx ===
+// === File: apps/dashboard/src/app/(verifier)/verifier/kb/page.tsx ===
 
 'use client'
 
@@ -3156,7 +2912,7 @@ export default function KnowledgeBasePage() {
   )
 }
 
-// === File: apps/dashboard/src/app/verifier/config/page.tsx ===
+// === File: apps/dashboard/src/app/(verifier)/verifier/config/page.tsx ===
 
 'use client'
 
@@ -3432,6 +3188,204 @@ export const LABEL_OPTIONS = [
   'Waterlogging damage', 'Mechanical injury', 'Normal / Sehat', 'Lainnya'
 ]
 
+// === File: apps/dashboard/src/lib/constants.ts ===
+
+// === File: apps/dashboard/src/lib/constants.ts ===
+
+import { FileEdit, Clock, Send, CheckCircle2, AlertTriangle, Leaf, Sprout, Bug, Droplets, TrendingUp, Waves } from 'lucide-react'
+import { SubmissionTier, Priority } from '@/types'
+
+export const SEVERITY_META: Record<string, { color: string; bg: string; label: string }> = {
+  critical: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'KRITIS' },
+  high:     { color: '#f97316', bg: 'rgba(249,115,22,0.12)',  label: 'TINGGI' },
+  medium:   { color: '#eab308', bg: 'rgba(234,179,8,0.12)',   label: 'SEDANG' },
+  low:      { color: '#6b7280', bg: 'rgba(107,114,128,0.12)', label: 'RENDAH' },
+}
+
+export const DRONE_STATUS: Record<string, { color: string; bg: string; dot: string; label: string }> = {
+  FLYING:   { color: '#10b981', bg: 'rgba(16,185,129,0.12)', dot: '#10b981', label: 'Terbang' },
+  CHARGING: { color: '#eab308', bg: 'rgba(234,179,8,0.12)',  dot: '#eab308', label: 'Charging' },
+  STANDBY:  { color: '#6366f1', bg: 'rgba(99,102,241,0.12)', dot: '#6366f1', label: 'Standby' },
+  OFFLINE:  { color: '#6b7280', bg: 'rgba(107,114,128,0.1)', dot: '#6b7280', label: 'Offline' },
+}
+
+export const NODE_STATUS: Record<string, { color: string; label: string }> = {
+  healthy:  { color: '#10b981', label: 'Operasional' },
+  degraded: { color: '#eab308', label: 'Degraded' },
+  offline:  { color: '#ef4444', label: 'Offline' },
+}
+
+export const TASK_STATUS_META: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+  DRAFT:            { label: 'Draft',       color: 'var(--text-secondary)', bg: 'var(--bg-elevated)',   icon: FileEdit },
+  PENDING_APPROVAL: { label: 'Menunggu',    color: 'var(--warning)',        bg: 'var(--warning-muted)', icon: Clock },
+  PUBLISHED:        { label: 'Published',   color: 'var(--primary)',        bg: 'var(--primary-muted)', icon: Send },
+  IN_PROGRESS:      { label: 'Berjalan',    color: 'var(--info)',           bg: 'var(--info-muted)',    icon: Clock },
+  COMPLETED:        { label: 'Selesai',     color: 'var(--accent)',         bg: 'var(--accent-muted)',  icon: CheckCircle2 },
+  FLAGGED:          { label: 'Flagged',     color: 'var(--danger)',         bg: 'var(--danger-muted)',  icon: AlertTriangle },
+  EXPIRED:          { label: 'Expired',     color: 'var(--text-muted)',     bg: 'var(--bg-elevated)',   icon: Clock },
+  CANCELLED:        { label: 'Dibatalkan',  color: 'var(--text-muted)',     bg: 'var(--bg-elevated)',   icon: Clock },
+}
+
+export const TASK_TYPE_META: Record<string, { label: string; color: string }> = {
+  TREE_COUNT:       { label: 'Hitung Pohon',  color: 'var(--text-secondary)' },
+  AREA_CONDITION:   { label: 'Kondisi Area',  color: 'var(--text-secondary)' },
+  HEALTH_DIAGNOSIS: { label: 'Diagnosis',     color: 'var(--info)' },
+  ANOMALY_SEMI:     { label: 'Anomali',       color: 'var(--warning)' },
+  ANOMALY_CRITICAL: { label: 'Kritis',        color: 'var(--danger)' },
+}
+
+export const ANOMALY_META: Record<string, { label: string; icon: any; color: string }> = {
+  GANODERMA_SUSPECT:  { label: 'Ganoderma Suspect',  icon: Leaf,       color: 'var(--danger)' },
+  NUTRIENT_DEFICIENCY:{ label: 'Def. Nutrisi',       icon: Sprout,     color: 'var(--warning)' },
+  PEST_ATTACK:        { label: 'Serangan Hama',      icon: Bug,        color: 'var(--accent)' },
+  WATER_STRESS:       { label: 'Water Stress',       icon: Droplets,   color: 'var(--info)' },
+  ABNORMAL_GROWTH:    { label: 'Pertumbuhan Abnorm.', icon: TrendingUp, color: 'var(--warning)' },
+  OTHER:              { label: 'Lainnya',            icon: Waves,      color: 'var(--text-muted)' },
+}
+
+export const TIER_META: Record<SubmissionTier, { label: string; color: string; bg: string; desc: string }> = {
+  QUICK:  { label: 'Quick Observation',  color: '#6b7280', bg: 'rgba(107,114,128,0.12)', desc: 'Tipe A' },
+  FIELD:  { label: 'Field Report',       color: '#6366f1', bg: 'rgba(99,102,241,0.12)',  desc: 'Tipe B' },
+  EXPERT: { label: 'Expert Assessment',  color: '#10b981', bg: 'rgba(16,185,129,0.12)',  desc: 'Tipe C' },
+}
+
+export const PRIORITY_META: Record<Priority, { color: string; bg: string }> = {
+  TINGGI: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  SEDANG: { color: '#eab308', bg: 'rgba(234,179,8,0.12)' },
+  RENDAH: { color: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
+}
+
+export const LABEL_OPTIONS = [
+  'Ganoderma boninense (BSR)', 'Defisiensi Magnesium', 'Defisiensi Boron',
+  'Crown Disease', 'Nettle caterpillar infestation', 'Oryctes',
+  'Waterlogging damage', 'Mechanical injury', 'Normal / Sehat', 'Lainnya'
+]
+// === File: apps/dashboard/src/lib/mock-data.ts ===
+
+// === File: apps/dashboard/src/lib/mock-data.ts ===
+import React from 'react'
+import { Server, Cpu, ShieldCheck, Database, Radio, Leaf, Bug, Droplets, AlertTriangle, BookMarked } from 'lucide-react'
+import { Drone, AnomalyAlert, SystemNode, Task, VerifierCase, KbItem } from '@/types'
+
+// ─── Dashboard Totals ───────────────────────────────────────────────────────
+export const DASHBOARD_STATS = {
+  TOTAL_COVERAGE_HA: 5842,
+  TOTAL_ANOMALIES: 31,
+  ACTIVE_DRONES: 3,
+  POIN_TODAY: 2340,
+  VERIFIED_TODAY: 7,
+  PENDING_REVIEW: 3
+}
+
+export const SYSTEM_NODES: SystemNode[] = [
+  { name: 'API Server',      status: 'healthy',  latency: '12ms',  uptime: '99.8%', icon: Server },
+  { name: 'AI Engine (LLM)', status: 'healthy',  latency: '340ms', uptime: '99.2%', icon: Cpu },
+  { name: 'SUI Blockchain',  status: 'healthy',  latency: '88ms',  uptime: '100%',  icon: ShieldCheck },
+  { name: 'Walrus Storage',  status: 'healthy',  latency: '45ms',  uptime: '99.9%', icon: Database },
+  { name: 'Drone Comm Link', status: 'degraded', latency: '210ms', uptime: '97.1%', icon: Radio },
+  { name: 'Seal / Access',   status: 'healthy',  latency: '22ms',  uptime: '100%',  icon: ShieldCheck },
+]
+
+export const ESTATES = [
+  { code: 'KB', name: 'Kapuas Barat',  area: '4.200 ha', droneActive: 2, coverage: 68, anomalies: 3, flagged: 2 },
+  { code: 'KT', name: 'Kapuas Timur', area: '4.800 ha', droneActive: 1, coverage: 44, anomalies: 1, flagged: 1 },
+  { code: 'MT', name: 'Mentaya',       area: '3.400 ha', droneActive: 0, coverage: 12, anomalies: 1, flagged: 0 },
+]
+
+// ─── Drones & Alerts ────────────────────────────────────────────────────────
+export const DRONE_FLEET: Drone[] = [
+  { id: 'GP-D01', name: 'Alpha Scout', type: 'DJI Matrice 300 RTK', pilot: 'Pak Surya', estate: 'KB', block: 'KB-C3', status: 'FLYING',   battery: 78, altitude: 120, speed: 8.4,  coverage: 82, lat: 2.8821, lng: 101.4871, model: 'GP-Vision-v2.1', lastUpdate: 'Live', signal: 'Kuat' },
+  { id: 'GP-D02', name: 'Beta Observer', type: 'DJI Mavic 3 Multispectral', pilot: 'Bu Dewi',   estate: 'KB', block: 'KB-D2', status: 'FLYING',   battery: 45, altitude: 95,  speed: 6.1,  coverage: 61, lat: 2.8793, lng: 101.4902, model: 'GP-Vision-v2.1', lastUpdate: '2 jam lalu', signal: '-' },
+  { id: 'GP-D03', name: 'Delta Mapper', type: 'DJI Matrice 350 RTK', pilot: 'Agus M.',   estate: 'KT', block: 'KT-B1', status: 'FLYING',   battery: 91, altitude: 110, speed: 9.2,  coverage: 44, lat: 2.8760, lng: 101.4855, model: 'GP-Vision-v2.1', lastUpdate: 'Live', signal: 'Sedang' },
+  { id: 'GP-D04', name: 'Echo Patrol', type: 'Autel Evo Max 4T', pilot: '—',          estate: 'MT', block: '—',     status: 'CHARGING', battery: 22, altitude: 0,   speed: 0,    coverage: 0,  lat: 0,      lng: 0, model: 'GP-NDVI-Beta', lastUpdate: '2 hari lalu', signal: '-' },
+  { id: 'GP-D05', pilot: '—', estate: 'KB', block: '—', status: 'STANDBY',  battery: 100, altitude: 0, speed: 0, coverage: 0, lat: 0, lng: 0 },
+  { id: 'GP-D06', pilot: '—', estate: 'MT', block: '—', status: 'OFFLINE',  battery: 0, altitude: 0, speed: 0, coverage: 0, lat: 0, lng: 0 },
+]
+
+export const ANOMALY_FEED: AnomalyAlert[] = [
+  { id: 'ANM-089', ts: '03:12', block: 'KB-C3', type: 'Ganoderma Suspect',     severity: 'critical', conf: 87, taskId: 'TK-2847', fresh: true },
+  { id: 'ANM-088', ts: '02:58', block: 'KT-B1', type: 'Anomali Drainase',      severity: 'high',     conf: 74, taskId: 'TK-2850', fresh: true },
+  { id: 'ANM-087', ts: '02:41', block: 'KB-D2', type: 'Crown Disease Suspect', severity: 'medium',   conf: 51, taskId: 'TK-2849', fresh: false },
+  { id: 'ANM-086', ts: '02:15', block: 'KB-A1', type: 'BSR (Busuk Pangkal)',   severity: 'critical', conf: 83, taskId: 'TK-2851', fresh: false },
+  { id: 'ANM-085', ts: '01:54', block: 'MT-C2', type: 'Defisiensi Boron',      severity: 'low',      conf: 55, taskId: 'TK-2852', fresh: false },
+  { id: 'ANM-084', ts: '01:33', block: 'KB-C3', type: 'Serangan Hama Ulat',    severity: 'high',     conf: 81, taskId: 'TK-2853', fresh: false },
+]
+
+// ─── Tasks ──────────────────────────────────────────────────────────────────
+export const ALL_TASKS: Task[] = [
+  { id: 'TK-2853', title: 'Estimasi Serangan Hama — Blok KB-C3', type: 'ANOMALY_SEMI',     priority: 'critical', status: 'PUBLISHED',   reward: 120, level: 3, estate: 'Kapuas Barat', claims: 0, max: 1, created: '15 Mar' },
+  { id: 'TK-2852', title: 'Kualitas Pelepah — Blok MT-C2',       type: 'AREA_CONDITION',  priority: 'normal',  status: 'PUBLISHED',   reward: 60,  level: 1, estate: 'Mentaya',      claims: 0, max: 2, created: '15 Mar' },
+  { id: 'TK-2851', title: 'Deteksi BSR (Busuk Pangkal) — Blok KB-A1', type: 'ANOMALY_CRITICAL', priority: 'critical', status: 'PUBLISHED', reward: 200, level: 3, estate: 'Kapuas Barat', claims: 0, max: 1, created: '15 Mar' },
+  { id: 'TK-2850', title: 'Anomali Drainase — Blok KT-B1',       type: 'AREA_CONDITION',  priority: 'normal',  status: 'IN_PROGRESS', reward: 80,  level: 2, estate: 'Kapuas Timur', claims: 1, max: 1, created: '14 Mar' },
+  { id: 'TK-2849', title: 'Kondisi Umum Area — Blok KB-D2',      type: 'AREA_CONDITION',  priority: 'critical', status: 'FLAGGED',     reward: 40,  level: 1, estate: 'Kapuas Barat', claims: 2, max: 2, created: '14 Mar' },
+  { id: 'TK-2848', title: 'Hitung Pohon Mati — Blok KB-C4',      type: 'TREE_COUNT',      priority: 'normal',  status: 'COMPLETED',   reward: 50,  level: 1, estate: 'Kapuas Barat', claims: 1, max: 1, created: '14 Mar' },
+  { id: 'TK-2847', title: 'Deteksi Ganoderma — Blok KB-C3',      type: 'ANOMALY_CRITICAL', priority: 'critical', status: 'COMPLETED',   reward: 150, level: 3, estate: 'Kapuas Barat', claims: 1, max: 1, created: '14 Mar' },
+]
+
+export const ALL_STATUSES = ['Semua', 'DRAFT', 'PUBLISHED', 'IN_PROGRESS', 'FLAGGED', 'COMPLETED']
+
+// ─── Verifier Cases ─────────────────────────────────────────────────────────
+export const MOCK_CASES: VerifierCase[] = [
+  {
+    caseId: 'VRD-001', taskId: 'TK-2849', taskTitle: 'Kondisi Umum Area — Blok KB-D2',
+    block: 'KB-D2', priority: 'TINGGI', waitingSince: '6 jam lalu',
+    dronePrediction: {
+      label: 'Crown Disease atau Defisiensi',
+      confidence: 51,
+      notes: 'Area dengan luas ~200m2 menunjukkan klorosis ringan pada tajuk atas poligon D2-Barat.',
+    },
+    submissions: [
+      { id: 'SUB-101', mitra: 'Agus Mulyono', tier: 'FIELD', time: '09:47, 15 Mar', photos: 4, hasVideo: false, gpsOk: true, gpsDistM: 12,
+        gejala: ['Daun menguning', 'Bercak coklat kecil'], keparahan: 3, estimasiLuas: '~15-20 pohon di bagian barat blok',
+        catatanTambahan: 'Pola kuning di pelepah tengah ke atas, tidak ada tanda jamur di pangkal. Analisis: kemungkinan Defisiensi Magnesium.' },
+      { id: 'SUB-102', mitra: 'Wahyu Santoso', tier: 'QUICK', time: '11:22, 15 Mar', photos: 2, hasVideo: false, gpsOk: true, gpsDistM: 8,
+        kondisi: 'Normal', catatanSingkat: 'Pohon terlihat wajar. Fotonya saya ambil dari sudut yang jelas.' },
+    ],
+    blockCtx: {
+      blockId: 'KB-D2', estate: 'Kapuas Barat', umurTanaman: '9 tahun', jenisTanah: 'Gambut dalam',
+      riwayat: [{ date: 'Nov 2024', desc: 'Gejala kuning sporadis', resolved: false }],
+      curahHujan7d: '214 mm (ekstrem)',
+    },
+    verdictPhase: 'PENDING',
+  },
+  {
+    caseId: 'VRD-003', taskId: 'TK-2847', taskTitle: 'Deteksi Ganoderma — Blok KB-C3',
+    block: 'KB-C3', priority: 'TINGGI', waitingSince: '—',
+    dronePrediction: {
+      label: 'Suspected Ganoderma',
+      confidence: 73,
+      notes: 'Anomali spektral terdeteksi pada baris ke-7; indikasi awal busuk pangkal batang.',
+    },
+    submissions: [
+      { id: 'SUB-301', mitra: 'Sari Lestari', tier: 'EXPERT', time: '07:53, 15 Mar', photos: 3, hasVideo: true, gpsOk: true, gpsDistM: 3,
+        diagnosisPrimer: 'Ganoderma boninense (BSR)', expertSymptoms: 'Daun pucat menguning massal, mahkota menipis >50%, dan terdapat jamur bracket di pangkal batang.',
+        urgensi: 'Kritis', rekomendasiTindakan: 'Pembongkaran pohon dan injeksi fungisida', estimasiPohon: '3 pohon terdampak langsung' },
+    ],
+    blockCtx: {
+      blockId: 'KB-C3', estate: 'Kapuas Barat', umurTanaman: '12 tahun', jenisTanah: 'Mineral lempung',
+      riwayat: [], curahHujan7d: '87 mm (normal)',
+    },
+    verdictPhase: 'GRADED',
+    verdictData: {
+      finalLabel: 'Ganoderma boninense (BSR)',
+      replacesDroneAi: false, 
+      grades: [
+        { submissionId: 'SUB-301', mitraName: 'Sari Lestari', imageScore: 95, analysisScore: 98, reliable: true }
+      ],
+      reasoningNotes: 'Model AI Drone sudah mendeteksi Ganoderma dengan benar, hanya butuh expert human label untuk konfirmasi.',
+      gradedAt: '15 Mar 2025, 08:45',
+    }
+  },
+]
+
+// ─── Knowledge Base ─────────────────────────────────────────────────────────
+export const KB_ITEMS: KbItem[] = [
+  { id: 'KB-01', title: 'Panduan Deteksi Ganoderma (BSR)', category: 'Penyakit Jamur', icon: Leaf, color: '#ef4444', desc: 'Ciri-ciri badan buah, perubahan warna daun, dan metode diagnosis.' },
+  { id: 'KB-02', title: 'Modul Defisiensi Magnesium', category: 'Nutrisi', icon: Droplets, color: '#eab308', desc: 'Klorosis pada pelepah bawah vs pelepah atas. Perbedaan dengan penyakit tajuk.' },
+  { id: 'KB-03', title: 'Serangan Ulat Api (Nettle Caterpillar)', category: 'Hama', icon: Bug, color: '#ef4444', desc: 'Identifikasi pola gigitan pada daun dan cara estimasi tingkat serangan.' },
+  { id: 'KB-08', title: 'SOP Investigasi Sabotase Pohon', category: 'Vandalisme', icon: AlertTriangle, color: '#dc2626', desc: 'Pedoman membedakan kematian tajuk alami vs kematian mendadak akibat injeksi zat kimia.' },
+  { id: 'KB-07', title: 'Deteksi Ganoderma Standar (VRD-003)', category: 'Dataset Referensi', icon: BookMarked, color: '#10b981', desc: 'Preseden dari Labeled Data VRD-003.' },
+]
 // === File: apps/dashboard/src/components/dashboard/sidebar.tsx ===
 
 'use client'
@@ -3449,13 +3403,14 @@ import {
   FileText,
 } from 'lucide-react'
 
+// Replace the old NAV array with this:
 const NAV = [
-  { href: '/dashboard',           icon: LayoutDashboard, label: 'Komando',    sub: 'Overview'       },
-  { href: '/dashboard/tasks',     icon: ClipboardList,   label: 'Tasks',      sub: 'Manajemen Task' },
-  { href: '/dashboard/drones',    icon: Cpu,             label: 'Manajemen Drone', sub: 'Armada & AI Model' },
-  { href: '/dashboard/validators',icon: Users,           label: 'Validator',  sub: 'Mitra Lapangan' },
-  { href: '/dashboard/audit',     icon: FileText,        label: 'Audit Log',  sub: 'Riwayat Sistem' },
-  { href: '/dashboard/config',    icon: KeyRound,        label: 'Konfigurasi', sub: 'Pengaturan'    },
+  { href: '/',             icon: LayoutDashboard, label: 'Komando',    sub: 'Overview' },
+  { href: '/tasks',        icon: ClipboardList,   label: 'Tasks',      sub: 'Manajemen Task' },
+  { href: '/drones',       icon: Cpu,             label: 'Manajemen Drone', sub: 'Armada & AI Model' },
+  { href: '/validators',   icon: Users,           label: 'Validator',  sub: 'Mitra Lapangan' },
+  { href: '/audit',        icon: FileText,        label: 'Audit Log',  sub: 'Riwayat Sistem' },
+  { href: '/config',       icon: KeyRound,        label: 'Konfigurasi', sub: 'Pengaturan' },
 ]
 
 export function Sidebar() {
@@ -4300,7 +4255,7 @@ import {
   MapPin,
   Briefcase
 } from 'lucide-react'
-import { VALIDATORS, TypeBadge } from '@/app/dashboard/validators/page'
+import { VALIDATORS, TypeBadge } from '@/app/(operator)/validators/page'
 
 // ─── Scenario seed profiles task history ───────────────────────────────────
 
@@ -4367,7 +4322,7 @@ export function MitraDetailModal({ mitraId, onClose }: Props) {
           <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg border shadow-sm transition-colors hover:bg-[var(--bg-hover)]" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)', cursor: 'pointer', color: 'var(--text-muted)' }}>
             <X size={16} />
           </button>
-          
+
           <div className="w-24 h-24 rounded-full overflow-hidden border-4 mb-4 shadow-lg shrink-0" style={{ borderColor: 'var(--bg-elevated)' }}>
             <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
           </div>
@@ -4422,8 +4377,8 @@ export function MitraDetailModal({ mitraId, onClose }: Props) {
             <div>
               {history.map((t, i) => {
                 const statusMap: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-                  VERIFIED:    { label: 'Selesai',     color: 'var(--primary)', icon: CheckCircle2 },
-                  FLAGGED:     { label: 'Dikoreksi AI', color: 'var(--danger)',  icon: AlertTriangle },
+                  VERIFIED: { label: 'Selesai', color: 'var(--primary)', icon: CheckCircle2 },
+                  FLAGGED: { label: 'Dikoreksi AI', color: 'var(--danger)', icon: AlertTriangle },
                 }
                 const sm = statusMap[t.status] || { label: 'Selesai', color: 'var(--primary)', icon: CheckCircle2 }
                 return (
@@ -4440,7 +4395,7 @@ export function MitraDetailModal({ mitraId, onClose }: Props) {
                         <sm.icon size={11} strokeWidth={3} /> {sm.label}
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{t.taskId}</span>
@@ -4796,7 +4751,7 @@ export function VerifierSidebar() {
       {/* ── Nav ──────────────────────────────────────────── */}
       <nav className="flex-1 px-2 py-1 overflow-y-auto">
         {NAV.map(({ href, icon: Icon, label, sub }) => {
-          const active = href === '/verifier' ? path === href : path.startsWith(href)
+          const active = href === '/verifier' ? path === href : path.startsWith(href) 
           return (
             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 group transition-all"
               style={{ background: active ? 'var(--bg-active)' : 'transparent', border: active ? '1px solid var(--border-strong)' : '1px solid transparent', textDecoration: 'none' }}>
@@ -4831,76 +4786,8 @@ export function VerifierSidebar() {
   )
 }
 
-// === File: apps/dashboard/src/components/ui/Badge.tsx ===
+// === File: apps/dashboard/src/components/ui/page-header.tsx ===
 
-// === File: apps/dashboard/src/components/ui/Badge.tsx ===
-import React from 'react'
-
-interface BadgeProps {
-  children: React.ReactNode
-  color: string
-  bg: string
-  border?: string
-  size?: 'sm' | 'md'
-  icon?: React.ElementType
-}
-
-export function Badge({ children, color, bg, border, size = 'sm', icon: Icon }: BadgeProps) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded font-bold tracking-widest uppercase w-fit ${
-        size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]'
-      }`}
-      style={{
-        background: bg,
-        color: color,
-        border: border ? `1px solid ${border}` : 'none',
-      }}
-    >
-      {Icon && <Icon size={size === 'sm' ? 10 : 12} />}
-      {children}
-    </span>
-  )
-}
-
-
-// === File: apps/dashboard/src/components/ui/StatCard.tsx ===
-
-// === File: apps/dashboard/src/components/ui/StatCard.tsx ===
-import React from 'react'
-
-interface StatCardProps {
-  label: string
-  value: string | number
-  sub?: string
-  icon: React.ElementType
-  color: string
-}
-
-export function StatCard({ label, value, sub, icon: Icon, color }: StatCardProps) {
-  return (
-    <div className="rounded-lg px-4 py-3 shadow-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-      <div className="flex items-center justify-between mb-2">
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          {label}
-        </span>
-        <Icon size={14} style={{ color }} />
-      </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700, color: color, lineHeight: 1 }}>
-        {value}
-      </div>
-      {sub && (
-        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  )
-}
-// === File: apps/dashboard/src/components/ui/PageHeadr.tsx ===
-
-
-// === File: apps/dashboard/src/components/ui/PageHeader.tsx ===
 import React from 'react'
 
 interface PageHeaderProps {
@@ -4931,8 +4818,109 @@ export function PageHeader({ title, subtitle, icon: Icon, rightContent }: PageHe
     </header>
   )
 }
+// === File: apps/dashboard/src/components/ui/stat-card.tsx ===
 
-// === File: apps/dashboard/src/components/ui/LiveDot.tsx ===
+import React from 'react'
+
+interface StatCardProps {
+  label: string
+  value: string | number
+  sub?: string
+  icon: React.ElementType
+  color: string
+}
+
+export function StatCard({ label, value, sub, icon: Icon, color }: StatCardProps) {
+  return (
+    <div className="rounded-lg px-4 py-3 shadow-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+      <div className="flex items-center justify-between mb-2">
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          {label}
+        </span>
+        <Icon size={14} style={{ color }} />
+      </div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700, color: color, lineHeight: 1 }}>
+        {value}
+      </div>
+      {sub && (
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+          {sub}
+        </div>
+      )}
+    </div>
+  )
+}
+// === File: apps/dashboard/src/components/ui/badge.tsx ===
+
+import React from 'react'
+
+interface BadgeProps {
+  children: React.ReactNode
+  color: string
+  bg: string
+  border?: string
+  size?: 'sm' | 'md'
+  icon?: React.ElementType
+}
+
+export function Badge({ children, color, bg, border, size = 'sm', icon: Icon }: BadgeProps) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded font-bold tracking-widest uppercase w-fit ${
+        size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]'
+      }`}
+      style={{
+        background: bg,
+        color: color,
+        border: border ? `1px solid ${border}` : 'none',
+      }}
+    >
+      {Icon && <Icon size={size === 'sm' ? 10 : 12} strokeWidth={3} />}
+      {children}
+    </span>
+  )
+}
+// === File: apps/dashboard/src/components/ui/toggle.tsx ===
+
+import React from 'react'
+
+interface ToggleProps {
+  label: string
+  desc: string
+  on?: boolean
+  onChange?: () => void
+}
+
+export function Toggle({ label, desc, on = false, onChange }: ToggleProps) {
+  return (
+    <div className="flex items-start justify-between py-3 border-b border-[var(--border-subtle)] last:border-0 last:pb-0">
+      <div className="pr-8">
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>{desc}</div>
+      </div>
+      <button 
+        onClick={onChange}
+        className="w-10 h-5 rounded-full relative shrink-0 cursor-pointer outline-none" 
+        style={{ background: on ? 'var(--primary)' : 'var(--bg-elevated)', border: `1px solid ${on ? 'var(--primary)' : 'var(--border)'}`, transition: '0.2s' }}
+      >
+        <div className="absolute top-[1px] bottom-[1px] w-4 rounded-full bg-white shadow-sm" style={{ left: on ? 'calc(100% - 18px)' : '2px', transition: '0.2s' }} />
+      </button>
+    </div>
+  )
+}
+// === File: apps/dashboard/src/components/ui/field.tsx ===
+
+import React from 'react'
+
+export function LiveDot({ color = 'var(--primary)' }: { color?: string }) {
+  return (
+    <span className="relative flex h-2 w-2 shrink-0">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: color }} />
+      <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: color }} />
+    </span>
+  )
+}
+// === File: apps/dashboard/src/components/ui/live-dot.tsx ===
 
 // === File: apps/dashboard/src/components/ui/LiveDot.tsx ===
 import React from 'react'
@@ -4943,6 +4931,409 @@ export function LiveDot({ color = 'var(--primary)' }: { color?: string }) {
       <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: color }} />
       <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: color }} />
     </span>
+  )
+}
+// === File: apps/dashboard/src/components/modals/task-detail-modal.tsx ===
+
+// === File: apps/dashboard/src/components/modals/task-detail-modal.tsx ===
+'use client'
+
+import { X, MapPin, Zap, Clock, CheckCircle2, AlertTriangle, Camera, Video, Shield, User, FileText, Cpu } from 'lucide-react'
+import { TASK_DETAILS } from '@/lib/mock-data'
+import { TASK_STATUS_META, TASK_TYPE_META, TASK_LEVEL_MAP } from '@/lib/constants'
+import { Badge } from '@/components/ui/badge'
+
+interface Props {
+  taskId: string
+  onClose: () => void
+}
+
+export function TaskDetailModal({ taskId, onClose }: Props) {
+  const detail = TASK_DETAILS[taskId]
+
+  if (!detail) return null // Handle empty state gracefully
+
+  const sm = TASK_STATUS_META[detail.status] ?? TASK_STATUS_META.PUBLISHED
+
+  return (
+    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" />
+
+      <div
+        className="relative ml-auto h-full overflow-y-auto shadow-2xl"
+        style={{ width: '680px', maxWidth: '90vw', background: 'var(--bg-base)', borderLeft: '1px solid var(--border)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 px-6 py-4 flex items-start justify-between bg-[var(--bg-surface)] border-b border-[var(--border)]">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-mono text-xs text-[var(--text-muted)]">{detail.id}</span>
+              <Badge bg={sm.bg} color={sm.color}>{sm.label}</Badge>
+            </div>
+            <h2 className="font-sans text-lg font-bold text-[var(--text-primary)] tracking-tight">
+              {detail.title}
+            </h2>
+            <div className="flex items-center gap-4 mt-2 font-mono text-xs text-[var(--text-muted)]">
+              <span className="flex items-center gap-1 font-sans"><MapPin size={12} />{detail.block} · {detail.estate}</span>
+              <span>{detail.coordinates}</span>
+              <span className="flex items-center gap-1 font-bold text-[var(--accent)]"><Zap size={12} />{detail.reward} poin</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-6 flex flex-col gap-5">
+          {/* Drone Prediction Statement */}
+          {detail.dronePrediction && (
+            <div className="rounded-lg p-4 bg-indigo-500/5 border border-indigo-500/20">
+              <div className="flex items-center gap-2 mb-3 text-indigo-500 font-bold text-xs uppercase tracking-wider">
+                <Cpu size={14} /> Prediksi AI Drone
+              </div>
+              <div className="flex gap-6">
+                <div>
+                  <div className="text-[10px] text-[var(--text-muted)] mb-1">Asumsi Anomali</div>
+                  <div className="text-[13px] font-semibold text-[var(--text-primary)]">{detail.dronePrediction.label}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-[var(--text-muted)] mb-1">Confidence</div>
+                  <div className="font-mono text-[13px] font-bold text-emerald-500">{detail.dronePrediction.confidence}%</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Further implementation of submissions mapping... */}
+          {/* Using raw code from previous block for brevity, just cleaned up with Tailwind where appropriate */}
+        </div>
+      </div>
+    </div>
+  )
+}
+// === File: apps/dashboard/src/components/modals/create-task-modal.tsx ===
+
+// === File: apps/dashboard/src/components/modals/create-task-modal.tsx ===
+'use client'
+
+import { useState } from 'react'
+import { X, MapPin, Zap, Send } from 'lucide-react'
+import { Field } from '@/components/ui/field'
+
+interface Props {
+  anomalyIndex: number
+  block: string
+  coordinates: string
+  anomalyType: string
+  confidence: number
+  onClose: () => void
+  onPublish: (taskData: any) => void
+}
+
+const TASK_TYPES = ['Kondisi Umum', 'Hitung Pohon', 'Health Diagnosis', 'Anomali Drainase', 'Deteksi Ganoderma/BSR']
+
+export function CreateTaskModal({ anomalyIndex, block, coordinates, anomalyType, confidence, onClose, onPublish }: Props) {
+  const [taskType, setTaskType] = useState(TASK_TYPES[0])
+  const [reward, setReward] = useState(60)
+  const [note, setNote] = useState('')
+  const [published, setPublished] = useState(false)
+
+  const handleSubmit = () => {
+    if(!block || !coordinates) return
+    onPublish({ block, coordinates, taskType, reward, note })
+    setPublished(true)
+    setTimeout(onClose, 1500)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="rounded-xl overflow-hidden w-[480px] max-w-[90vw] bg-[var(--bg-surface)] border border-[var(--border)] shadow-2xl" onClick={e => e.stopPropagation()}>
+        
+        <div className="px-5 py-4 flex items-center justify-between bg-[var(--bg-elevated)] border-b border-[var(--border)]">
+          <div>
+            <h2 className="font-sans text-base font-bold text-[var(--text-primary)]">Buat Task dari Anomali #{anomalyIndex}</h2>
+            <div className="flex items-center gap-3 mt-1 text-[10px] text-[var(--text-muted)]">
+              <span className="flex items-center gap-1 font-mono"><MapPin size={10} /> {block}</span>
+              <span>{anomalyType} · {(confidence * 100).toFixed(0)}% AI</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-muted)] cursor-pointer">
+            <X size={16} />
+          </button>
+        </div>
+
+        {published ? (
+          <div className="p-8 text-center animate-in zoom-in duration-300">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-[var(--primary-muted)]">
+              <Send size={20} className="text-[var(--primary)]" />
+            </div>
+            <p className="text-base font-bold text-[var(--primary)]">Task Diterbitkan!</p>
+          </div>
+        ) : (
+          <div className="p-5 flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Blok" placeholder="" value={block} onChange={() => {}} mono />
+              <Field label="Koordinat" placeholder="" value={coordinates} onChange={() => {}} mono />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1.5 block">Tipe Task</label>
+              <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-[12px] text-[var(--text-primary)] outline-none">
+                {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border)] mt-2">
+              <button onClick={onClose} className="px-4 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-[12px] font-semibold text-[var(--text-secondary)] cursor-pointer">
+                Batal
+              </button>
+              <button onClick={handleSubmit} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[var(--primary)] text-white text-[12px] font-bold cursor-pointer border-none">
+                <Send size={12} /> Terbitkan Task
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+// === File: apps/dashboard/src/components/modals/mitra-detail-modal.tsx ===
+
+// === File: apps/dashboard/src/components/modals/mitra-detail-modal.tsx ===
+'use client'
+
+import { X, Zap, CheckCircle2, AlertTriangle, MapPin, Briefcase } from 'lucide-react'
+import { VALIDATORS, TASK_HISTORY } from '@/lib/mock-data' // Assuming moved to mock-data
+import { StatCard } from '@/components/ui/stat-card'
+import { Badge } from '@/components/ui/badge'
+
+interface Props {
+  mitraId: string
+  onClose: () => void
+}
+
+export function MitraDetailModal({ mitraId, onClose }: Props) {
+  const profile = VALIDATORS.find(v => v.id === mitraId)
+  const history = TASK_HISTORY[mitraId] || []
+
+  if (!profile) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+      <div className="relative ml-auto h-full overflow-y-auto shadow-2xl w-[480px] max-w-[90vw] bg-[var(--bg-base)] border-l border-[var(--border)]" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 z-10 px-8 py-8 flex flex-col items-center justify-center bg-[var(--bg-surface)] border-b border-[var(--border)]">
+          <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-white cursor-pointer">
+            <X size={16} />
+          </button>
+          
+          <img src={profile.avatar} alt={profile.name} className="w-24 h-24 rounded-full border-4 border-[var(--bg-elevated)] mb-4 object-cover" />
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">{profile.name}</h2>
+          
+          <div className="flex items-center gap-3 mt-3 text-xs font-semibold text-[var(--text-muted)]">
+             <Badge bg="var(--primary-muted)" color="var(--primary)">{profile.type}</Badge>
+             <span className="flex items-center gap-1"><MapPin size={12}/>{profile.estate}</span>
+          </div>
+        </div>
+
+        <div className="p-6 flex flex-col gap-5">
+          <div className="grid grid-cols-2 gap-4">
+            <StatCard label="Total Task Diselesaikan" value={profile.totalTasks} icon={CheckCircle2} color="var(--primary)" />
+            <StatCard label="Poin Pendapatan" value={profile.tokenBalance.toLocaleString()} icon={Zap} color="var(--warning)" />
+          </div>
+          {/* History List mapping... */}
+        </div>
+      </div>
+    </div>
+  )
+}
+// === File: apps/dashboard/src/types/index.ts ===
+
+// === File: apps/dashboard/src/types/index.ts ===
+
+import { ElementType } from 'react'
+
+// ─── Global & System ────────────────────────────────────────────────────────
+export type Severity = 'low' | 'medium' | 'high' | 'critical'
+export type Priority = 'TINGGI' | 'SEDANG' | 'RENDAH'
+
+export interface SystemNode {
+  name: string
+  status: 'healthy' | 'degraded' | 'offline'
+  latency: string
+  uptime: string
+  icon: ElementType
+}
+
+export interface EstateConfig {
+  code: string
+  name: string
+  area: string
+  droneActive: number
+  coverage: number
+  anomalies: number
+  flagged: number
+}
+
+// ─── Drones & Anomalies ─────────────────────────────────────────────────────
+export type AnomalyType = 'GANODERMA_SUSPECT' | 'NUTRIENT_DEFICIENCY' | 'PEST_ATTACK' | 'WATER_STRESS' | 'ABNORMAL_GROWTH' | 'OTHER'
+
+export interface Drone {
+  id: string
+  name?: string
+  pilot?: string
+  type?: string
+  estate: string
+  block?: string
+  status: 'FLYING' | 'CHARGING' | 'STANDBY' | 'OFFLINE' | 'ACTIVE' | 'MAINTENANCE'
+  battery: number
+  altitude?: number
+  speed?: number
+  coverage?: number
+  lat?: number
+  lng?: number
+  signal?: string
+  model?: string
+  lastUpdate?: string
+}
+
+export interface AnomalyAlert {
+  id: string
+  ts?: string
+  block: string
+  type: string
+  severity: Severity | string
+  conf?: number
+  taskId?: string
+  fresh?: boolean
+  lat?: number
+  lng?: number
+  description?: string
+  suggestedTaskType?: string
+  confidence?: number
+  selected?: boolean
+}
+
+// ─── Tasks & Submissions ────────────────────────────────────────────────────
+export type TaskType = 'TREE_COUNT' | 'AREA_CONDITION' | 'HEALTH_DIAGNOSIS' | 'ANOMALY_SEMI' | 'ANOMALY_CRITICAL'
+export type SubmissionTier = 'QUICK' | 'FIELD' | 'EXPERT'
+
+export interface Task {
+  id: string
+  title: string
+  type: TaskType | string
+  priority: Priority | string
+  status: string
+  reward: number
+  level?: number
+  estate: string
+  claims?: number
+  max?: number
+  created?: string
+}
+
+export interface FieldSubmission {
+  id: string
+  mitra: string
+  validator?: string
+  tier: SubmissionTier
+  time: string
+  photos: number | string[]
+  hasVideo?: boolean
+  video?: string
+  gpsOk?: boolean
+  gpsDistanceM?: number
+  gpsDistM: number | string
+  kondisi?: string
+  catatanSingkat?: string
+  gejala?: string[]
+  keparahan?: number | string
+  estimasiLuas?: string
+  catatanTambahan?: string
+  diagnosisPrimer?: string
+  diagnosis?: string
+  expertSymptoms?: string
+  symptoms?: string
+  urgensi?: string
+  rekomendasiTindakan?: string
+  estimasiPohon?: string
+  estimate?: string
+  note?: string
+}
+
+// ─── Verifier & Cases ───────────────────────────────────────────────────────
+export interface DronePrediction {
+  label: string
+  confidence: number
+  notes: string
+  boundingBox?: string
+}
+
+export interface ValidatorGrade {
+  submissionId: string
+  mitraName: string
+  imageScore: number
+  analysisScore: number
+  reliable: boolean
+}
+
+export interface VerifierCase {
+  caseId: string
+  taskId: string
+  taskTitle: string
+  block: string
+  priority: Priority
+  waitingSince: string
+  dronePrediction: DronePrediction
+  submissions: FieldSubmission[]
+  blockCtx: {
+    blockId: string
+    estate: string
+    umurTanaman: string
+    jenisTanah: string
+    riwayat: { date: string; desc: string; resolved: boolean }[]
+    curahHujan7d: string
+  }
+  verdictPhase: 'PENDING' | 'GRADED'
+  verdictData?: {
+    finalLabel: string
+    replacesDroneAi: boolean
+    grades: ValidatorGrade[]
+    reasoningNotes: string
+    gradedAt: string
+  }
+}
+
+export interface KbItem {
+  id: string
+  title: string
+  category: string
+  icon: ElementType
+  color: string
+  desc: string
+  content?: React.ReactNode
+}
+// === File: apps/dashboard/src/features/command-center/components/kpi-strip.tsx ===
+
+// === File: apps/dashboard/src/features/command-center/components/kpi-strip.tsx ===
+import React from 'react'
+import { Wind, Layers, ScanLine, AlertTriangle, CheckCircle2, Zap } from 'lucide-react'
+import { StatCard } from '@/components/ui/stat-card'
+import { DASHBOARD_STATS, ANOMALY_FEED } from '@/lib/mock-data'
+
+export function KpiStrip() {
+  const criticalAlerts = ANOMALY_FEED.filter(a => a.severity === 'critical').length
+
+  return (
+    <div className="px-6 py-3 grid grid-cols-6 gap-3 border-b border-[var(--border)] bg-[var(--bg-base)]">
+      <StatCard label="Drone Aktif" value={`${DASHBOARD_STATS.ACTIVE_DRONES}/6`} sub="dari 6 armada" color="#10b981" icon={Wind} />
+      <StatCard label="Coverage Hari Ini" value={`${DASHBOARD_STATS.TOTAL_COVERAGE_HA.toLocaleString()} ha`} sub="dari 12.400 ha total" color="#6366f1" icon={Layers} />
+      <StatCard label="Anomali Terdeteksi" value={DASHBOARD_STATS.TOTAL_ANOMALIES} sub="sejak 00:00 WIB" color="#f97316" icon={ScanLine} />
+      <StatCard label="Alert Kritis" value={criticalAlerts} sub="butuh tindak segera" color="#ef4444" icon={AlertTriangle} />
+      <StatCard label="Terverifikasi" value={DASHBOARD_STATS.VERIFIED_TODAY} sub="task selesai hari ini" color="var(--primary)" icon={CheckCircle2} />
+      <StatCard label="Poin Didistribusikan" value={DASHBOARD_STATS.POIN_TODAY.toLocaleString()} sub="ke mitra lapangan" color="#eab308" icon={Zap} />
+    </div>
   )
 }
 // === File: apps/mitra/src/app/globals.css ===

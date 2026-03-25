@@ -1,68 +1,7 @@
 'use client'
 
-import {
-  X,
-  MapPin,
-  Zap,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Camera,
-  Video,
-  Shield,
-  ExternalLink,
-  User,
-  FileText,
-  Cpu,
-} from 'lucide-react'
-
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-interface Submission {
-  validator: string
-  time: string
-  photos: string[]
-  video?: string
-  symptoms?: string
-  severity?: string
-  estimate?: string
-  diagnosis: string
-  note: string
-  gpsDistanceM: number
-}
-
-interface QualityGate {
-  status: 'PASS' | 'FLAGGED'
-  analysis: string
-}
-
-interface SmartContract {
-  tokenMinted: boolean
-  amount: number
-  mintedAt?: string
-  txHash?: string
-  rewardDistribution?: { validator: string; amount: number; percentage: number }[]
-}
-
-export interface TaskDetail {
-  id: string
-  title: string
-  block: string
-  coordinates: string
-  estate: string
-  reward: number
-  status: string
-  dronePrediction?: {
-    label: string
-    confidence: number
-    notes: string
-  }
-  submissions: Submission[]
-  qualityGate: QualityGate
-  contract: SmartContract
-}
-
-// ─── Scenario seed detail data ──────────────────────────────────────────────
+import { X, MapPin, Zap, Clock, Camera, Video, Shield, User, Cpu } from 'lucide-react'
+import type { TaskDetail } from '@/types'
 
 export const TASK_DETAILS: Record<string, TaskDetail> = {
   'TK-2847': {
@@ -186,14 +125,12 @@ export const TASK_DETAILS: Record<string, TaskDetail> = {
   },
 }
 
-// ─── Component ──────────────────────────────────────────────────────────────
-
-interface Props {
+interface TaskDetailModalProps {
   taskId: string
   onClose: () => void
 }
 
-export function TaskDetailModal({ taskId, onClose }: Props) {
+export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
   const detail = TASK_DETAILS[taskId]
 
   if (!detail) {

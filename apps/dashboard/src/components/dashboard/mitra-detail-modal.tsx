@@ -1,48 +1,15 @@
 'use client'
 
-import {
-  X,
-  Zap,
-  CheckCircle2,
-  AlertTriangle,
-  MapPin,
-  Briefcase
-} from 'lucide-react'
-import { VALIDATORS, TypeBadge } from '@/app/dashboard/validators/page'
+import { X, Zap, CheckCircle2, AlertTriangle, MapPin, Briefcase } from 'lucide-react'
+import { VALIDATORS, TASK_HISTORY } from '@/lib/mock-data'
+import { Badge } from '@/components/ui/badge'
 
-// ─── Scenario seed profiles task history ───────────────────────────────────
-
-const TASK_HISTORY: Record<string, any[]> = {
-  'M-001': [
-    { taskId: 'TK-2847', title: 'Deteksi Ganoderma — KB-C3', date: '15 Mar', status: 'VERIFIED', reward: 150 },
-    { taskId: 'TK-2853', title: 'Estimasi Serangan Hama — KB-C3', date: '15 Mar', status: 'FLAGGED', reward: 0 },
-    { taskId: 'TK-2841', title: 'Health Diagnosis — KB-B4', date: '12 Mar', status: 'VERIFIED', reward: 100 },
-  ],
-  'M-002': [
-    { taskId: 'TK-2848', title: 'Hitung Pohon Mati — KB-C4', date: '14 Mar', status: 'VERIFIED', reward: 50 },
-    { taskId: 'TK-2840', title: 'Kondisi Umum — KB-E1', date: '11 Mar', status: 'VERIFIED', reward: 40 },
-  ],
-  'M-003': [
-    { taskId: 'TK-2849', title: 'Kondisi Umum — KB-D2', date: '14 Mar', status: 'FLAGGED', reward: 0 },
-    { taskId: 'TK-2834', title: 'Anomali Drainase — KT-B2', date: '7 Mar', status: 'VERIFIED', reward: 80 },
-  ],
-  'M-004': [
-    { taskId: 'TK-2849', title: 'Kondisi Umum — KB-D2', date: '14 Mar', status: 'FLAGGED', reward: 0 },
-    { taskId: 'TK-2837', title: 'Hitung Pohon — KB-C2', date: '9 Mar', status: 'VERIFIED', reward: 50 },
-  ],
-  'M-005': [
-    { taskId: 'TK-2842', title: 'Kondisi Umum — MT-A2', date: '12 Mar', status: 'VERIFIED', reward: 40 },
-  ],
-}
-
-// ─── Component ──────────────────────────────────────────────────────────────
-
-interface Props {
+interface MitraDetailModalProps {
   mitraId: string
   onClose: () => void
 }
 
-export function MitraDetailModal({ mitraId, onClose }: Props) {
+export function MitraDetailModal({ mitraId, onClose }: MitraDetailModalProps) {
   const profile = VALIDATORS.find(v => v.id === mitraId)
   const history = TASK_HISTORY[mitraId] || []
 
@@ -75,7 +42,7 @@ export function MitraDetailModal({ mitraId, onClose }: Props) {
           <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg border shadow-sm transition-colors hover:bg-[var(--bg-hover)]" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)', cursor: 'pointer', color: 'var(--text-muted)' }}>
             <X size={16} />
           </button>
-          
+
           <div className="w-24 h-24 rounded-full overflow-hidden border-4 mb-4 shadow-lg shrink-0" style={{ borderColor: 'var(--bg-elevated)' }}>
             <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
           </div>
@@ -84,7 +51,13 @@ export function MitraDetailModal({ mitraId, onClose }: Props) {
             {profile.name}
           </h2>
           <div className="flex items-center gap-3 mt-3">
-            <TypeBadge type={profile.type} />
+            <Badge
+              bg={profile.type === 'Internal' ? 'var(--primary-muted)' : 'var(--bg-elevated)'}
+              color={profile.type === 'Internal' ? 'var(--primary)' : 'var(--text-secondary)'}
+              border={profile.type === 'Internal' ? 'var(--primary-border)' : 'var(--border)'}
+            >
+              {profile.type === 'Internal' ? 'INTERNAL (KARYAWAN)' : 'EKSTERNAL (MITRA)'}
+            </Badge>
             <span className="flex items-center gap-1.5" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
               <MapPin size={12} />{profile.estate}
             </span>
@@ -129,11 +102,7 @@ export function MitraDetailModal({ mitraId, onClose }: Props) {
             </div>
             <div>
               {history.map((t, i) => {
-                const statusMap: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-                  VERIFIED:    { label: 'Selesai',     color: 'var(--primary)', icon: CheckCircle2 },
-                  FLAGGED:     { label: 'Dikoreksi AI', color: 'var(--danger)',  icon: AlertTriangle },
-                }
-                const sm = statusMap[t.status] || { label: 'Selesai', color: 'var(--primary)', icon: CheckCircle2 }
+                const isVerified = t.status === 'VERIFIED'
                 return (
                   <div
                     key={t.taskId}
@@ -144,11 +113,15 @@ export function MitraDetailModal({ mitraId, onClose }: Props) {
                       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                         {t.title}
                       </div>
-                      <span className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: sm.color, background: `${sm.color}15` }}>
-                        <sm.icon size={11} strokeWidth={3} /> {sm.label}
-                      </span>
+                      <Badge
+                        bg={isVerified ? 'var(--primary-muted)' : 'var(--danger-muted)'}
+                        color={isVerified ? 'var(--primary)' : 'var(--danger)'}
+                        icon={isVerified ? CheckCircle2 : AlertTriangle}
+                      >
+                        {isVerified ? 'Selesai' : 'Dikoreksi AI'}
+                      </Badge>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{t.taskId}</span>
