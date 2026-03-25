@@ -1,7 +1,7 @@
-import express from 'express'
+import express, { type Express } from 'express'
 import cors from 'cors'
 
-export const app = express()
+export const app: Express = express()
 
 app.use(cors())
 app.use(express.json())

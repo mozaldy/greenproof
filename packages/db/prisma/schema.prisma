@@ -56,10 +56,17 @@ model Company {
   aiMode           String   @default("greenproof") // greenproof | own_model
   sealPolicyId     String? // Seal policy ID untuk akses foto mereka
   createdAt        DateTime @default(now())
+  tokenSymbol      String?
+  tokenName        String?
+  contractAddress  String?  // SUI package ID
+  treasuryCapId    String?  // CompanyTreasuryCap object ID
+  taskRegistryId   String?  // TaskRegistry object ID
 
   users      User[]
   tasks      Task[]
   validators ValidatorProfile[]
+  validator  Validator[]
+  auditLogs  AuditLog[]
 }
 
 model User {
@@ -108,11 +115,18 @@ model Task {
   maxClaims     Int        @default(1)
   currentClaims Int        @default(0)
   status        TaskStatus @default(DRAFT)
-  anomalySource String? // "drone_simulator" | "manual" | "ai_model"
-  anomalyRaw    Json? // raw output drone/AI — tidak di-expose ke mitra
-  expiresAt     DateTime?
-  createdAt     DateTime   @default(now())
-  publishedAt   DateTime?
+  anomalySource   String?  // "drone_simulator" | "manual" | "ai_model"
+  anomalyRaw      Json?    // raw output drone/AI — tidak di-expose ke mitra
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  publishedAt     DateTime?
+  suiTaskId       String?  @unique  // on-chain Task object ID
+  lat             Float?
+  lng             Float?
+  blok            String?
+  estate          String?
+  txHash          String?           // publish transaction digest
+  createdByUserId String?
 
   company     Company      @relation(fields: [companyId], references: [id])
   submissions Submission[]
@@ -163,4 +177,43 @@ model AnomalyLog {
   rawOutput    Json // array anomali yang di-generate LLM
   tasksCreated Int      @default(0)
   generatedAt  DateTime @default(now())
+}
+
+model Validator {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  phone      String?
+  suiAddress String?  @unique
+  level      Int      @default(1)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  company    Company  @relation(fields: [companyId], references: [id])
+}
+
+model SealAccessLog {
+  id        String   @id @default(cuid())
+  companyId String
+  policyId  String
+  grantedTo String
+  action    String   // "GRANT" | "REVOKE"
+  service   String?  // human-readable service name
+  blobCount Int      @default(0)
+  purpose   String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String?
+  actorId    String?
+  actorName  String?
+  action     String
+  entityType String
+  entityId   String?
+  estate     String?
+  txHash     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  company    Company? @relation(fields: [companyId], references: [id])
 }
