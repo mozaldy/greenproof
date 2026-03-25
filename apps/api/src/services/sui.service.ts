@@ -6,14 +6,38 @@ const NETWORK = (process.env.SUI_NETWORK as 'testnet' | 'mainnet' | 'devnet') ??
 const PACKAGE_ID = process.env.GREENPROOF_PACKAGE_ID ?? ''
 const ADMIN_CAP_ID = process.env.GREENPROOF_ADMIN_CAP_ID ?? ''
 
+/** Call once at API startup to fail fast if SUI env vars are missing. */
+export function validateSuiEnv(): void {
+  const required: Record<string, string | undefined> = {
+    GREENPROOF_PACKAGE_ID: process.env.GREENPROOF_PACKAGE_ID,
+    GREENPROOF_ADMIN_CAP_ID: process.env.GREENPROOF_ADMIN_CAP_ID,
+    GREENPROOF_DEPLOYER_PRIVATE_KEY: process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY,
+  }
+  const missing = Object.entries(required)
+    .filter(([, v]) => !v)
+    .map(([k]) => k)
+  if (missing.length > 0) {
+    throw new Error(`SUI env vars not configured: ${missing.join(', ')}`)
+  }
+}
+
+let _client: SuiClient | undefined
+let _keypair: Ed25519Keypair | undefined
+
 function getClient(): SuiClient {
-  return new SuiClient({ url: process.env.SUI_RPC_URL ?? getFullnodeUrl(NETWORK) })
+  if (!_client) {
+    _client = new SuiClient({ url: process.env.SUI_RPC_URL ?? getFullnodeUrl(NETWORK) })
+  }
+  return _client
 }
 
 function getDeployerKeypair(): Ed25519Keypair {
-  const key = process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY
-  if (!key) throw new Error('GREENPROOF_DEPLOYER_PRIVATE_KEY not set')
-  return Ed25519Keypair.fromSecretKey(Buffer.from(key, 'hex'))
+  if (!_keypair) {
+    const key = process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY
+    if (!key) throw new Error('GREENPROOF_DEPLOYER_PRIVATE_KEY not set')
+    _keypair = Ed25519Keypair.fromSecretKey(Buffer.from(key, 'hex'))
+  }
+  return _keypair
 }
 
 function deployerAddress(): string {
@@ -150,6 +174,10 @@ export async function claimTask(params: {
   validatorAddress: string
   validatorPrivKeyHex: string  // ephemeral key from zkLogin session; MVP: use deployer key
 }): Promise<{ txHash: string }> {
+  if (params.validatorPrivKeyHex === process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY) {
+    console.warn('[sui.service] WARNING: using deployer key as validator proxy — replace with session key in production')
+  }
+
   const client = getClient()
   const deployerKeypair = getDeployerKeypair()
   const validatorKeypair = Ed25519Keypair.fromSecretKey(Buffer.from(params.validatorPrivKeyHex, 'hex'))
@@ -188,6 +216,10 @@ export async function submitValidationOnChain(params: {
   validatorAddress: string
   validatorPrivKeyHex: string
 }): Promise<{ txHash: string }> {
+  if (params.validatorPrivKeyHex === process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY) {
+    console.warn('[sui.service] WARNING: using deployer key as validator proxy — replace with session key in production')
+  }
+
   const client = getClient()
   const deployerKeypair = getDeployerKeypair()
   const validatorKeypair = Ed25519Keypair.fromSecretKey(Buffer.from(params.validatorPrivKeyHex, 'hex'))
@@ -264,12 +296,17 @@ export async function flagTaskOnChain(
 export async function createReputation(params: {
   companyId: string
   validatorAddress: string
-}): Promise<{ txHash: string }> {
+}): Promise<{ reputationId: string; txHash: string }> {
   const tx = new TransactionBlock()
   tx.moveCall({
     target: `${PACKAGE_ID}::reward_engine::create_reputation`,
     arguments: [tx.pure(params.companyId), tx.pure(params.validatorAddress)],
   })
   const result = await executeAdmin(tx)
-  return { txHash: result.digest }
+  const created = (result.objectChanges ?? []).find(
+    c => c.type === 'created' && c.objectType?.includes('ValidatorReputation')
+  )
+  // reputationId may be undefined if chain didn't return it — treat as optional
+  const reputationId = (created?.type === 'created' ? created.objectId : undefined) ?? ''
+  return { reputationId, txHash: result.digest }
 }
