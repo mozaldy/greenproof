@@ -185,6 +185,7 @@ export interface TaskDetail {
 export interface ValidatorProfile {
   id: string
   name: string
+  walletAddress: string // <-- Tambahan baru
   type: string
   status: string
   totalTasks: number

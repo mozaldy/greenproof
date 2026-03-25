@@ -39,13 +39,6 @@ export default function CommandCenterPage() {
               <Clock size={13} className="text-[var(--text-muted)]" />
               <span className="font-mono text-lg font-bold text-[var(--text-primary)]">{timeStr}</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm" style={{ background: `${sysColor}15`, borderColor: `${sysColor}44` }}>
-              <LiveDot color={sysColor} />
-              <span className="font-mono text-[10px] font-bold tracking-widest uppercase" style={{ color: sysColor }}>SYSTEM {sysLabel}</span>
-            </div>
-            <Link href="/dashboard/drone-scanner" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white font-sans text-[11px] font-bold no-underline">
-              <ScanLine size={12} /> Scanner
-            </Link>
           </>
         }
       />

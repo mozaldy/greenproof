@@ -1,5 +1,5 @@
 import { Server, Cpu, ShieldCheck, Database, Radio, Leaf, Bug, Droplets, AlertTriangle, BookMarked } from 'lucide-react'
-import { Drone, AnomalyAlert, SystemNode, Task, VerifierCase, KbItem, TaskDetail } from '@/types'
+import { Drone, AnomalyAlert, SystemNode, Task, VerifierCase, KbItem, TaskDetail, ValidatorProfile } from '@/types'
 
 // ─── Dashboard Totals ───────────────────────────────────────────────────────
 export const DASHBOARD_STATS = {
@@ -121,12 +121,12 @@ export const KB_ITEMS: KbItem[] = [
   { id: 'KB-07', title: 'Deteksi Ganoderma Standar (VRD-003)', category: 'Dataset Referensi', icon: BookMarked, color: '#10b981', desc: 'Preseden dari Labeled Data VRD-003.' },
 ]
 
-export const VALIDATORS = [
-  { id: 'M-001', name: 'Pak Surya',       type: 'Internal', status: 'active', totalTasks: 347, tokenBalance: 42300, estate: 'Kapuas Barat',   avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=150' },
-  { id: 'M-002', name: 'Bu Dewi',         type: 'Internal', status: 'active', totalTasks: 128, tokenBalance: 14890, estate: 'KB & KT',        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150' },
-  { id: 'M-003', name: 'Agus Mulyono',    type: 'Eksternal',status: 'active', totalTasks: 95,  tokenBalance: 8200,  estate: 'Kapuas Timur',   avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150' },
-  { id: 'M-004', name: 'Wahyu Santoso',   type: 'Eksternal',status: 'active', totalTasks: 23,  tokenBalance: 1150,  estate: 'Kapuas Barat',   avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=150' },
-  { id: 'M-005', name: 'Fitri Handayani', type: 'Eksternal',status: 'active', totalTasks: 11,  tokenBalance: 520,   estate: 'Mentaya',        avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=150' },
+export const VALIDATORS: ValidatorProfile[] = [
+  { id: 'M-001', name: 'Pak Surya', walletAddress: '0x7a3f...e8f9', type: 'Internal', status: 'active', totalTasks: 347, tokenBalance: 42300, estate: 'Kapuas Barat', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=150' },
+  { id: 'M-002', name: 'Bu Dewi', walletAddress: '0x9b2c...d1a4', type: 'Internal', status: 'active', totalTasks: 128, tokenBalance: 14890, estate: 'Kapuas Barat', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150' },
+  { id: 'M-003', name: 'Agus Mulyono', walletAddress: '0xDef4...d5e6', type: 'Eksternal', status: 'active', totalTasks: 95, tokenBalance: 8200, estate: 'Kapuas Timur', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150' },
+  { id: 'M-004', name: 'Wahyu Santoso', walletAddress: '0xAb12...e2f3', type: 'Eksternal', status: 'active', totalTasks: 23, tokenBalance: 1150, estate: 'Kapuas Barat', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=150' },
+  { id: 'M-005', name: 'Fitri Handayani', walletAddress: '0x8c5d...b3a1', type: 'Eksternal', status: 'active', totalTasks: 11, tokenBalance: 520, estate: 'Mentaya', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=150' },
 ]
 
 interface TaskHistoryItem {

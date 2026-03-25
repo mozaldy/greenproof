@@ -36,17 +36,6 @@ export default function TasksPage() {
         subtitle={`${filtered.length} task ditemukan`}
         rightContent={
           <>
-            <Link href="/simulator" className="flex items-center gap-2 px-3 py-2 rounded border text-xs font-semibold no-underline transition-colors" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--accent)' }}>
-              <Cpu size={13} /> Buat via Simulator
-            </Link>
-            
-            <button
-              onClick={() => setIsCreateOpen(true)} 
-              className="flex items-center gap-2 px-4 py-2 rounded text-xs font-bold text-white border-none cursor-pointer transition-transform active:scale-95" 
-              style={{ background: 'var(--primary)' }}
-            >
-              <Plus size={13} /> BUAT TASK BARU
-            </button>
           </>
         }
       />
@@ -106,10 +95,6 @@ export default function TasksPage() {
                   <Zap size={10} />{task.reward}
                 </div>
                 <span className="text-[11px] text-[var(--text-muted)]">{task.estate}</span>
-                <div className="flex items-center gap-1">
-                  <button className="p-1 rounded bg-[var(--bg-elevated)] border border-[var(--border)] cursor-pointer text-[var(--text-muted)]"><Eye size={11} /></button>
-                  <button className="p-1 rounded bg-[var(--bg-elevated)] border border-[var(--border)] cursor-pointer text-[var(--text-muted)]"><MoreHorizontal size={11} /></button>
-                </div>
               </div>
             )
           })}
