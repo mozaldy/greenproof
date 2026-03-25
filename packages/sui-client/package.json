@@ -1,0 +1,27 @@
+{
+  "name": "@greenproof/sui-client",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mysten/sui.js": "^0.54.1",
+    "@mysten/zklogin": "^0.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.0"
+  }
+}

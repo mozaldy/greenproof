@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN_GREENPROOF
+  OPERATOR
+  SUPERVISOR
+  AGRONOMIS
+  FIELD_OBSERVER // Level 1
+  FIELD_ANALYST // Level 2
+  FIELD_EXPERT // Level 3
+}
+
+enum TaskType {
+  TREE_COUNT // hitungan pohon              — min Level 1
+  AREA_CONDITION // kondisi umum area            — min Level 1
+  HEALTH_DIAGNOSIS // diagnosis kesehatan pohon    — min Level 2
+  ANOMALY_SEMI // anomali semi-kritikal         — min Level 2
+  ANOMALY_CRITICAL // anomali kritikal              — min Level 3
+}
+
+enum TaskStatus {
+  DRAFT
+  PENDING_APPROVAL // menunggu Supervisor
+  PUBLISHED // on-chain, terlihat mitra
+  IN_PROGRESS // ada klaim aktif
+  COMPLETED // semua klaim selesai & verified
+  FLAGGED // dikirim ke Agronomis
+  EXPIRED
+  CANCELLED
+}
+
+enum SubmissionStatus {
+  PENDING
+  LLM_CHECKING
+  VERIFIED
+  REJECTED
+  FLAGGED
+  REWARDED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Company {
+  id               String   @id @default(cuid())
+  name             String
+  subscriptionTier String   @default("starter") // starter | growth | enterprise
+  aiMode           String   @default("greenproof") // greenproof | own_model
+  sealPolicyId     String? // Seal policy ID untuk akses foto mereka
+  createdAt        DateTime @default(now())
+
+  users      User[]
+  tasks      Task[]
+  validators ValidatorProfile[]
+}
+
+model User {
+  id         String   @id @default(cuid())
+  companyId  String? // null untuk Admin GreenProof
+  googleId   String   @unique
+  email      String   @unique
+  name       String
+  role       Role
+  suiAddress String? // di-derive saat zkLogin pertama kali (mitra saja)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  company          Company?          @relation(fields: [companyId], references: [id])
+  validatorProfile ValidatorProfile?
+  submissions      Submission[]
+  verdicts         Verdict[]
+}
+
+model ValidatorProfile {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  companyId         String
+  level             Int     @default(1) // 1 | 2 | 3
+  totalTasks        Int     @default(0)
+  accurateCount     Int     @default(0) // task yang terbukti benar
+  accuracyRate      Float   @default(0) // accurateCount / totalTasks
+  tokenBalance      Int     @default(0) // cache off-chain
+  consecutiveMonths Int     @default(0) // syarat naik Level 3
+
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+}
+
+model Task {
+  id            String     @id @default(cuid())
+  companyId     String
+  onChainTaskId String?    @unique // ID di SUI setelah publish
+  title         String
+  type          TaskType
+  priority      String     @default("normal") // normal | critical
+  coordinates   Json // { lat: Float, lng: Float }
+  description   String
+  requiredLevel Int        @default(1)
+  rewardTokens  Int
+  maxClaims     Int        @default(1)
+  currentClaims Int        @default(0)
+  status        TaskStatus @default(DRAFT)
+  anomalySource String? // "drone_simulator" | "manual" | "ai_model"
+  anomalyRaw    Json? // raw output drone/AI — tidak di-expose ke mitra
+  expiresAt     DateTime?
+  createdAt     DateTime   @default(now())
+  publishedAt   DateTime?
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  submissions Submission[]
+}
+
+model Submission {
+  id              String           @id @default(cuid())
+  taskId          String
+  userId          String
+  onChainSubmitId String?
+  status          SubmissionStatus @default(PENDING)
+  photos          Json // [{ walrusObjectId, sealPolicyId, gpsLat, gpsLng, timestamp }]
+  diagnosis       String
+  diagnosisCode   String? // e.g. "GANODERMA_SUSPECT"
+  gpsLat          Float
+  gpsLng          Float
+  gpsDistanceM    Float? // jarak dari koordinat task (meter)
+  llmQualityScore Float? // 0.0 - 1.0
+  llmQualityNote  String?
+  llmFlags        String[] // ["GPS_TOO_FAR","PHOTO_IRRELEVANT",...]
+  tokenAwarded    Int?
+  submittedAt     DateTime         @default(now())
+  verifiedAt      DateTime?
+
+  task    Task    @relation(fields: [taskId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  verdict Verdict?
+}
+
+model Verdict {
+  id             String   @id @default(cuid())
+  submissionId   String   @unique
+  agronomistId   String
+  verdict        String // "CONFIRMED" | "REJECTED" | "INCONCLUSIVE"
+  diagnosisCode  String?
+  notes          String
+  isTrainingData Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id])
+  agronomist User       @relation(fields: [agronomistId], references: [id])
+}
+
+model AnomalyLog {
+  id           String   @id @default(cuid())
+  companyId    String
+  estateInfo   Json // { name, location, areaHa, centerLat, centerLng }
+  rawOutput    Json // array anomali yang di-generate LLM
+  tasksCreated Int      @default(0)
+  generatedAt  DateTime @default(now())
+}

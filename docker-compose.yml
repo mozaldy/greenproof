@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: greenproof-db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: greenproof
+    ports:
+      - "5432:5432"
+    volumes:
+      - greenproof-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d greenproof"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: node:20-alpine
+    container_name: greenproof-app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "3002:3002"
+      - "5555:5555"
+    command: sh -c "corepack enable pnpm && pnpm install && pnpm dev"
+
+volumes:
+  greenproof-db-data:

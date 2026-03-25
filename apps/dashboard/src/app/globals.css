@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ─── Base surfaces (slate dark mode) ──────────────── */
+  --bg-base:     #0f172a;
+  --bg-surface:  #1e293b;
+  --bg-elevated: #334155;
+  --bg-hover:    #3b4c66;
+  --bg-active:   #1e3a5f;
+
+  /* ─── Borders ────────────────────────────────────────── */
+  --border:        #334155;
+  --border-subtle: #1e293b;
+  --border-strong: #475569;
+
+  /* ─── Primary — emerald accent ─────────────────────── */
+  --primary:        #34d399;
+  --primary-hover:  #2cc78a;
+  --primary-muted:  rgba(52, 211, 153, 0.10);
+  --primary-border: rgba(52, 211, 153, 0.25);
+
+  /* ─── Accent — amber ───────────────────────────────── */
+  --accent:       #fbbf24;
+  --accent-hover: #f59e0b;
+  --accent-muted: rgba(251, 191, 36, 0.10);
+
+  /* ─── Semantic ───────────────────────────────────────── */
+  --warning:       #fbbf24;
+  --warning-muted: rgba(251, 191, 36, 0.10);
+  --danger:        #f87171;
+  --danger-muted:  rgba(248, 113, 113, 0.10);
+  --info:          #60a5fa;
+  --info-muted:    rgba(96, 165, 250, 0.10);
+
+  /* ─── Text ───────────────────────────────────────────── */
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-inverse:   #0f172a;
+
+  /* ─── Typography ─────────────────────────────────────── */
+  --font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:  'JetBrains Mono', 'Courier New', monospace;
+
+  /* ─── Sidebar ─────────────────────────────────────────── */
+  --sidebar-width: 220px;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  code, pre, .mono {
+    font-family: var(--font-mono);
+  }
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 6px; height: 6px; }
+::-webkit-scrollbar-track        { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb        { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--text-muted); }
+
+/* ─── Animations ─────────────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.fade-up {
+  animation: fade-up 0.35s ease both;
+}
