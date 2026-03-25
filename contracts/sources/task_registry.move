@@ -67,7 +67,7 @@ module greenproof::task_registry {
         coin: CompanyToken,
         ctx: &mut TxContext
     ) {
-        assert!(validator_token::value(&coin) == reward_amount, E_INSUFFICIENT_BALANCE); // Gunakan konstanta atau validasi logika
+        assert!(validator_token::value(&coin) == reward_amount, E_INSUFFICIENT_BALANCE);
         
         let task = Task {
             id: object::new(ctx),
