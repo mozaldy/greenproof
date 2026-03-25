@@ -12,6 +12,9 @@ export { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client'
 export { TransactionBlock } from '@mysten/sui.js/transactions'
 export { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519'
 
+// Re-export Walrus HTTP client
+export * from './walrus'
+
 // TODO: Implement after Move contracts are deployed
 // export { publishTask }     from './task-registry'
 // export { claimTask }       from './task-registry'
