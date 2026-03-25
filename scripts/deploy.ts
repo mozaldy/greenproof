@@ -4,8 +4,13 @@ import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: path.join(__dirname, '../apps/api/.env') });
 
 async function main() {
+    const NETWORK = (process.env.SUI_NETWORK as 'testnet' | 'mainnet' | 'devnet') ?? 'testnet';
+
     // 1. Read deployer keypair from environment variable (hex-encoded)
     const hexKey = process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY;
     if (!hexKey) {
@@ -16,7 +21,7 @@ async function main() {
     console.log('Deploying from address:', deployerAddress);
 
     // 2. Setup SUI testnet client
-    const client = new SuiClient({ url: getFullnodeUrl('testnet') });
+    const client = new SuiClient({ url: getFullnodeUrl(NETWORK) });
 
     // 3. Build Move contracts
     console.log('Building Move contracts...');
@@ -64,7 +69,7 @@ async function main() {
     const adminCapChange = objectChanges.find(
         (c) =>
             c.type === 'created' &&
-            c.objectType.includes('GreenproofAdminCap')
+            c.objectType?.includes('GreenproofAdminCap')
     );
     if (!adminCapChange || adminCapChange.type !== 'created') {
         throw new Error('Could not find GreenproofAdminCap in objectChanges');
@@ -102,7 +107,7 @@ async function main() {
     const treasuryCapChange = tokenObjectChanges.find(
         (c) =>
             c.type === 'created' &&
-            c.objectType.includes('CompanyTreasuryCap')
+            c.objectType?.includes('CompanyTreasuryCap')
     );
     if (!treasuryCapChange || treasuryCapChange.type !== 'created') {
         throw new Error('Could not find CompanyTreasuryCap in objectChanges');
@@ -137,7 +142,7 @@ async function main() {
     const registryChange = registryObjectChanges.find(
         (c) =>
             c.type === 'created' &&
-            c.objectType.includes('TaskRegistry')
+            c.objectType?.includes('TaskRegistry')
     );
     if (!registryChange || registryChange.type !== 'created') {
         throw new Error('Could not find TaskRegistry in objectChanges');
@@ -147,7 +152,7 @@ async function main() {
 
     // 8. Write deployed.json
     const deployed = {
-        network: 'testnet',
+        network: NETWORK,
         packageId,
         adminCapId,
         deployTxHash,
