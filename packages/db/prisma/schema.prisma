@@ -62,11 +62,11 @@ model Company {
   treasuryCapId    String?  // CompanyTreasuryCap object ID
   taskRegistryId   String?  // TaskRegistry object ID
 
-  users      User[]
-  tasks      Task[]
-  validators ValidatorProfile[]
-  validator  Validator[]
-  auditLogs  AuditLog[]
+  users              User[]
+  tasks              Task[]
+  validators         ValidatorProfile[]
+  managedValidators  Validator[]
+  auditLogs          AuditLog[]
 }
 
 model User {
@@ -120,7 +120,8 @@ model Task {
   expiresAt       DateTime?
   createdAt       DateTime @default(now())
   publishedAt     DateTime?
-  suiTaskId       String?  @unique  // on-chain Task object ID
+  /// Canonical SUI Task object ID. Use this in all new code. onChainTaskId is a legacy alias.
+  suiTaskId       String?  @unique
   lat             Float?
   lng             Float?
   blok            String?
