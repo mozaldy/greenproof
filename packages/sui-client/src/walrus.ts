@@ -22,12 +22,10 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Generate a mock blob ID (32-character hex string).
+ * Generate a mock blob ID with timestamp and random suffix.
  */
 function generateMockBlobId(): string {
-  return Array.from({ length: 32 }, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  ).join('')
+  return `mock-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
 /**
@@ -86,8 +84,9 @@ export async function uploadToWalrus(data: Buffer, mimeType: string): Promise<Wa
       })
 
       if (!response.ok) {
+        const errText = await response.text()
         throw new Error(
-          `Walrus upload failed with status ${response.status}: ${response.statusText}`
+          `Walrus upload failed ${response.status}: ${errText.slice(0, 200)}`
         )
       }
 
@@ -105,16 +104,18 @@ export async function uploadToWalrus(data: Buffer, mimeType: string): Promise<Wa
       }
 
       // Handle "alreadyCertified" response shape
-      if ('alreadyCertified' in responseData || 'blobId' in responseData) {
-        const blobId = (responseData.blobId ?? responseData.alreadyCertified) as string
+      if ('alreadyCertified' in responseData) {
+        const alreadyCertified = responseData.alreadyCertified as Record<string, string>
         return {
-          blobId,
-          suiObjectId: blobId,
+          blobId: alreadyCertified.blobId,
+          suiObjectId: alreadyCertified.blobId,  // no object ID in this case
           size: data.length,
         }
       }
 
-      throw new Error(`Unexpected Walrus response shape: ${JSON.stringify(responseData)}`)
+      throw new Error(
+        `Unexpected Walrus response shape: ${JSON.stringify(responseData).slice(0, 200)}`
+      )
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
 
