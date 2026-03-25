@@ -37,9 +37,6 @@ export default function HistoryPage() {
               Kumpulan data forensik definitif yang telah diseleksi oleh Verifier. Data ini 100% anonymized dan siap untuk training AI.
             </p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors hover:bg-[var(--bg-hover)]" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--primary)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            <Download size={14} /> Ekspor Dataset JSON
-          </button>
         </div>
       </header>
 

@@ -51,7 +51,6 @@ export default function VerifierPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: 'var(--bg-base)' }}>
-      {/* Top Controller Header */}
       <header className="flex items-center justify-between px-8 py-3 shrink-0 shadow-sm relative z-30" style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-6">
           <h1 className="flex items-center gap-2 font-sans text-lg font-bold text-[var(--text-primary)]">
@@ -98,13 +97,9 @@ export default function VerifierPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-[var(--bg-base)] border-[var(--border)]">
-          <CheckCircle2 size={14} className="text-[#10b981]" />
-          <span className="font-sans text-xs font-bold text-[var(--text-primary)]">{graded.length + 246} Data Terverifikasi</span>
-        </div>
       </header>
 
-      {/* ── Main Workspace ────────────────────────────────────────── */}
+      {/* ── Main Workspace ── */}
       <div className="flex flex-1 overflow-hidden relative">
         <EvidenceViewer 
           activeCase={activeCase} 
@@ -112,6 +107,7 @@ export default function VerifierPage() {
           onOpenForm={() => setShowForm(true)} 
         />
         
+        {/* Dirender bersamaan agar animasi translate-x jalan dengan mulus */}
         <GradingStudio 
           activeCase={activeCase} 
           showForm={showForm} 

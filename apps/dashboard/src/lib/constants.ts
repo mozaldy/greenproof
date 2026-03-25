@@ -65,7 +65,7 @@ export const PRIORITY_META: Record<Priority, { color: string; bg: string }> = {
 export const LABEL_OPTIONS = [
   'Ganoderma boninense (BSR)', 'Defisiensi Magnesium', 'Defisiensi Boron',
   'Crown Disease', 'Nettle caterpillar infestation', 'Oryctes',
-  'Waterlogging damage', 'Mechanical injury', 'Normal / Sehat', 'Lainnya'
+  'Waterlogging damage', 'Mechanical injury', 'Normal / Sehat',
 ]
 
 export const TASK_LEVEL_MAP: Record<string, number> = {

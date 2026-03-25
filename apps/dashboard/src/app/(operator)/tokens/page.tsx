@@ -303,9 +303,6 @@ function StatCard({ title, value, icon: Icon, colorClass, bgClass, desc }: { tit
         </div>
         <p className="text-[11px] text-[var(--text-secondary)] font-medium leading-snug pr-2">{desc}</p>
       </div>
-      <div className={`absolute -bottom-6 -right-6 opacity-10 pointer-events-none ${colorClass}`}>
-        <Icon size={120} />
-      </div>
     </div>
   )
 }

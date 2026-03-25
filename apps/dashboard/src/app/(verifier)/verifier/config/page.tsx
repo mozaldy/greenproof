@@ -45,68 +45,6 @@ export default function VerifierConfigPage() {
             </div>
           </div>
         </section>
-
-        {/* ── Preferensi AI Studio ── */}
-        <section className="rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--bg-surface)] shadow-sm">
-          <div className="px-5 py-3 flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
-            <MonitorPlay size={14} className="text-[var(--primary)]" />
-            <h2 className="font-sans text-sm font-bold text-[var(--text-primary)]">Preferensi AI Studio</h2>
-          </div>
-          <div className="p-5">
-            <div className="flex flex-col border border-[var(--border)] rounded-lg bg-[var(--bg-base)] px-4">
-              <Toggle 
-                label="Auto-select task berikutnya" 
-                desc="Beralih secara otomatis ke task pending selanjutnya setelah submit Ground Truth Label." 
-                on={prefs.autoSelectTask}
-                onChange={() => handleToggle('autoSelectTask')}
-              />
-              <Toggle 
-                label="Tampilkan foto resolusi penuh (High-Res)" 
-                desc="Menggunakan lebih banyak bandwidth tapi mempermudah deteksi visual anomali." 
-                on={prefs.highResPhotos}
-                onChange={() => handleToggle('highResPhotos')}
-              />
-              <Toggle 
-                label="Notifikasi Desktop" 
-                desc="Beritahu saya jika ada antrean task berstatus TINGGI (Critical)." 
-                on={prefs.desktopNotif}
-                onChange={() => handleToggle('desktopNotif')}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* ── Sistem Labeled Data ── */}
-        <section className="rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--bg-surface)] shadow-sm">
-          <div className="px-5 py-3 flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
-            <Shield size={14} className="text-[var(--primary)]" />
-            <h2 className="font-sans text-sm font-bold text-[var(--text-primary)]">Sistem Labeled Data</h2>
-          </div>
-          <div className="p-5">
-            <div className="flex flex-col border border-[var(--border)] rounded-lg bg-[var(--bg-base)] px-4">
-              <Toggle 
-                label="Otomatis commit ke Model Repo" 
-                desc="Data yang dilabeli langsung di-push ke repository model AI untuk retraining sprint malam hari." 
-                on={prefs.autoCommit}
-                onChange={() => handleToggle('autoCommit')}
-              />
-              <Toggle 
-                label="Tampilkan batas toleransi skor Mitra" 
-                desc="Di borang evaluasi, tampilkan bayangan abu-abu penanda batas nilai wajar rata-rata." 
-                on={prefs.showTolerance}
-                onChange={() => handleToggle('showTolerance')}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* ── Action Button ── */}
-        <div className="mt-2">
-          <button className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[var(--primary)] text-white font-sans text-[13px] font-bold cursor-pointer border-none transition-transform active:scale-95 shadow-md hover:bg-emerald-500">
-            <Save size={14} /> Simpan Pengaturan
-          </button>
-        </div>
-
       </div>
     </div>
   )

@@ -17,11 +17,11 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
   const toggleSub = (id: string) => setExpandedSubs(p => ({ ...p, [id]: !p[id] }))
 
   return (
-    <div className={`flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300 ${showForm ? 'mr-[420px]' : ''}`} style={{ background: 'var(--bg-base)' }}>
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300" style={{ background: 'var(--bg-base)' }}>
       <div className="max-w-5xl mx-auto flex flex-col gap-6">
         
-        {/* Header Info */}
-        <div className="flex items-center justify-between">
+        {/* ── HEADER KONTEN & TOMBOL ACTION ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] shadow-sm">
               <MapPin size={14} className="text-[var(--primary)]" />
@@ -30,9 +30,26 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
               </span>
             </div>
           </div>
-          {activeCase.verdictPhase === 'GRADED' && (
-            <div className="px-3 py-1.5 rounded bg-[#10b981]/10 text-[#10b981] font-bold text-sm flex items-center gap-2 border border-[#10b981]/20 shadow-sm">
-              <CheckCircle2 size={16} /> DATA TERVERIFIKASI
+          
+          {/* TOMBOL DIPINDAHKAN KE SINI */}
+          {!showForm && (
+            <div className="flex items-center gap-3">
+              {activeCase.verdictPhase === 'PENDING' ? (
+                <button onClick={onOpenForm} className="px-5 py-2.5 rounded-lg flex items-center gap-2 transition-all hover:-translate-y-0.5 border cursor-pointer shadow-md bg-[var(--primary)] text-white border-[var(--primary-border)] hover:bg-emerald-500">
+                  <FileCheck size={16} />
+                  <span className="font-bold text-xs tracking-wide uppercase">Lakukan Verifikasi</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1.5 rounded bg-[#10b981]/10 text-[#10b981] font-bold text-sm flex items-center gap-2 border border-[#10b981]/20 shadow-sm">
+                    <CheckCircle2 size={16} /> TERVERIFIKASI
+                  </div>
+                  <button onClick={onOpenForm} className="px-4 py-2 rounded-lg flex items-center gap-2 transition-colors border shadow-sm cursor-pointer bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--bg-hover)]">
+                    <CheckSquare size={16} className="text-[#10b981]" />
+                    <span className="font-bold text-xs tracking-wide uppercase">Lihat Hasil</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -111,7 +128,6 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
                           <Badge bg={tierMeta.bg} color={tierMeta.color} border={tierMeta.color}>{tierMeta.label}</Badge>
                         </div>
                         <div className="flex items-center gap-3 sm:gap-4 text-[11px] sm:text-xs text-[var(--text-muted)]">
-                          <span className="font-semibold text-[var(--text-secondary)] truncate">"{sub.diagnosisPrimer || sub.kondisi || sub.catatanSingkat || 'Tinjauan Umum'}"</span>
                           <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-[var(--border)] shrink-0" />
                           <span className="flex items-center gap-1 shrink-0 font-mono">
                             <MapPin size={10} className={Number(sub.gpsDistM) <= 15 ? "text-[#10b981]" : "text-[var(--danger)]"} />
@@ -138,7 +154,6 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
                         </div>
                       </div>
 
-                      {/* Detail Information */}
                       <div className="px-4 sm:px-5 py-4 mb-2 bg-[var(--bg-surface)] border-y border-[var(--border)] flex flex-col gap-4">
                         
                         {/* EXPERT (Forensic Analysis) */}
@@ -163,7 +178,6 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
                             <div className="grid grid-cols-2 gap-4 p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--primary-border)]/20 shadow-sm">
                               <div>
                                 <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Urgensi Penanganan</div>
-                                {/* FIX TERHADAP ERROR TYPING ADA DI BAWAH INI */}
                                 <div className="font-bold text-[13px] text-[var(--danger)]">{sub.urgensi || '-'}</div>
                               </div>
                               <div>
@@ -244,24 +258,8 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
             })}
           </div>
         </div>
-
-        {/* Floating Actions */}
-        {!showForm && activeCase.verdictPhase === 'PENDING' && (
-          <div className="absolute bottom-6 right-6 sm:bottom-8 sm:right-8 z-20">
-            <button onClick={onOpenForm} className="px-5 py-3 sm:px-6 sm:py-4 rounded-full shadow-2xl flex items-center gap-2 sm:gap-3 transition-transform hover:scale-105 border cursor-pointer" style={{ background: 'var(--primary)', color: 'var(--text-inverse)', borderColor: 'var(--primary-border)' }}>
-              <FileCheck size={18} className="sm:w-5 sm:h-5" />
-              <span className="font-bold text-xs sm:text-sm tracking-wide uppercase">Lakukan Verifikasi Data</span>
-            </button>
-          </div>
-        )}
-        {!showForm && activeCase.verdictPhase === 'GRADED' && (
-           <div className="absolute bottom-6 right-6 sm:bottom-8 sm:right-8 z-20">
-            <button onClick={onOpenForm} className="px-5 py-3 sm:px-6 sm:py-4 rounded-full flex items-center gap-2 sm:gap-3 transition-colors border shadow-lg cursor-pointer" style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', borderColor: 'var(--border)' }}>
-              <CheckSquare size={18} className="sm:w-5 sm:h-5 text-[#10b981]" />
-              <span className="font-bold text-xs sm:text-sm tracking-wide uppercase text-opacity-80">Lihat Hasil Verifikasi</span>
-            </button>
-          </div>
-        )}
+        
+        {/* Tombol yang semula di sini sudah saya pindahkan ke Header konten */}
       </div>
     </div>
   )
