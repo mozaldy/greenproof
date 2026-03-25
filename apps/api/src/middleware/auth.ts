@@ -49,6 +49,6 @@ export function requireRole(...roles: string[]) {
 /** Issues a signed JWT for the given auth payload */
 export function issueToken(payload: AuthPayload): string {
   return jwt.sign(payload, process.env.JWT_SECRET ?? 'dev-secret-change-me', {
-    expiresIn: (process.env.JWT_EXPIRES_IN ?? '7d') as jwt.SignOptions['expiresIn'],
-  })
+    expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
+  } as any)
 }

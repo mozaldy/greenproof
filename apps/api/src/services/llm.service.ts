@@ -1,8 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { QualityGateResult, DroneAnomaly } from '@greenproof/shared'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MOCK_LLM = process.env.MOCK_LLM === 'true'
+
+let _anthropicClient: Anthropic | undefined
+
+function getAnthropicClient(): Anthropic {
+  if (!_anthropicClient) {
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set — set MOCK_LLM=true for local dev')
+    _anthropicClient = new Anthropic({ apiKey })
+  }
+  return _anthropicClient
+}
 
 // ─── Quality Gate ───────────────────────────────────────────────────────────
 
@@ -53,7 +63,7 @@ Evaluate whether the photos support the diagnosis and are taken at the correct l
     },
   ]
 
-  const response = await client.messages.create({
+  const response = await getAnthropicClient().messages.create({
     model: 'claude-3-5-sonnet-20240620',
     max_tokens: 512,
     system: systemPrompt,
@@ -133,7 +143,7 @@ Each item must have exactly these fields:
 }
 Use realistic disease names: Ganoderma boninense, BSR, Crown Disease, Defisiensi Magnesium, Oryctes rhinoceros, waterlogging, Nettle caterpillar.`
 
-  const response = await client.messages.create({
+  const response = await getAnthropicClient().messages.create({
     model: 'claude-3-haiku-20240307',
     max_tokens: 2048,
     messages: [{ role: 'user', content: prompt }],

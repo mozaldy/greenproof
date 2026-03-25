@@ -44,6 +44,10 @@ export async function toggleAiAccess(params: {
   policyId: string
   enable: boolean
 }): Promise<void> {
+  if (!AI_SERVICE_ADDRESS) {
+    console.warn('[seal.service] AI_SERVICE_ADDRESS not configured — skipping Seal access toggle')
+    return
+  }
   if (params.enable) {
     await grantSealAccess(params.policyId, AI_SERVICE_ADDRESS)
   } else {
