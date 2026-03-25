@@ -15,6 +15,9 @@ export { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519'
 // Re-export Walrus HTTP client
 export * from './walrus'
 
+// Re-export Seal access control and encryption
+export * from './seal'
+
 // TODO: Implement after Move contracts are deployed
 // export { publishTask }     from './task-registry'
 // export { claimTask }       from './task-registry'
