@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ClipboardList, Cpu, Users, KeyRound, FileText } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Cpu, Users, KeyRound, FileText, Wallet } from 'lucide-react'
 
 const NAV = [
   { href: '/',             icon: LayoutDashboard, label: 'Komando',    sub: 'Overview' },
   { href: '/tasks',        icon: ClipboardList,   label: 'Tasks',      sub: 'Manajemen Task' },
   { href: '/drones',       icon: Cpu,             label: 'Manajemen Drone', sub: 'Armada & AI Model' },
+  { href: '/tokens',       icon: Wallet,          label: 'Treasury',   sub: 'Distribusi Poin' }, // <-- TAMBAHKAN INI
   { href: '/validators',   icon: Users,           label: 'Validator',  sub: 'Mitra Lapangan' },
   { href: '/audit',        icon: FileText,        label: 'Audit Log',  sub: 'Riwayat Sistem' },
   { href: '/config',       icon: KeyRound,        label: 'Konfigurasi', sub: 'Pengaturan' },

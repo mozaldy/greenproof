@@ -1,6 +1,169 @@
+apps/
+├── api
+│   ├── package.json
+│   ├── src
+│   │   ├── app.ts
+│   │   └── index.ts
+│   └── tsconfig.json
+├── dashboard
+│   ├── components.json
+│   ├── next.config.mjs
+│   ├── next-env.d.ts
+│   ├── package.json
+│   ├── postcss.config.mjs
+│   ├── src
+│   │   ├── app
+│   │   │   ├── globals.css
+│   │   │   ├── layout.tsx
+│   │   │   ├── (operator)
+│   │   │   │   ├── audit
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── config
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── drones
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── layout.tsx
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── simulator
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── tasks
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── validators
+│   │   │   │       └── page.tsx
+│   │   │   └── (verifier)
+│   │   │       ├── layout.tsx
+│   │   │       └── verifier
+│   │   │           ├── config
+│   │   │           │   └── page.tsx
+│   │   │           ├── history
+│   │   │           │   └── page.tsx
+│   │   │           ├── kb
+│   │   │           │   └── page.tsx
+│   │   │           └── page.tsx
+│   │   ├── components
+│   │   │   ├── dashboard
+│   │   │   │   ├── create-task-modal.tsx
+│   │   │   │   ├── map-overview.tsx
+│   │   │   │   ├── mitra-detail-modal.tsx
+│   │   │   │   ├── sidebar.tsx
+│   │   │   │   ├── task-detail-modal.tsx
+│   │   │   │   └── verifier-sidebar.tsx
+│   │   │   ├── modals
+│   │   │   │   ├── create-task-modal.tsx
+│   │   │   │   ├── mitra-detail-modal.tsx
+│   │   │   │   └── task-detail-modal.tsx
+│   │   │   └── ui
+│   │   │       ├── badge.tsx
+│   │   │       ├── field.tsx
+│   │   │       ├── live-dot.tsx
+│   │   │       ├── page-header.tsx
+│   │   │       ├── stat-card.tsx
+│   │   │       └── toggle.tsx
+│   │   ├── features
+│   │   │   ├── command-center
+│   │   │   │   └── components
+│   │   │   │       └── kpi-strip.tsx
+│   │   │   └── verification-studio
+│   │   │       └── components
+│   │   │           ├── evidence-viewer.tsx
+│   │   │           └── grading-studio.tsx
+│   │   ├── lib
+│   │   │   ├── constants.ts
+│   │   │   ├── mock-data.ts
+│   │   │   └── utils.ts
+│   │   └── types
+│   │       └── index.ts
+│   ├── tailwind.config.ts
+│   ├── tsconfig.json
+│   └── tsconfig.tsbuildinfo
+└── mitra
+    ├── components.json
+    ├── next.config.mjs
+    ├── next-env.d.ts
+    ├── package.json
+    ├── postcss.config.mjs
+    ├── src
+    │   ├── app
+    │   │   ├── globals.css
+    │   │   ├── layout.tsx
+    │   │   ├── page.tsx
+    │   │   ├── profile
+    │   │   │   └── page.tsx
+    │   │   └── tasks
+    │   │       ├── [id]
+    │   │       │   ├── page.tsx
+    │   │       │   └── submit
+    │   │       │       └── page.tsx
+    │   │       └── page.tsx
+    │   ├── components
+    │   │   ├── bottom-nav.tsx
+    │   │   └── ui
+    │   │       └── TaskCard.tsx
+    │   └── lib
+    │       └── utils.ts
+    ├── tailwind.config.ts
+    └── tsconfig.json
 
-// === File: apps/dashboard/src/app/globals.css ===
+39 directories, 66 files
+\n\n// --- File: apps/dashboard/tailwind.config.ts --- //
+import type { Config } from 'tailwindcss'
 
+const config: Config = {
+  darkMode: ['class'],
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
+      colors: {
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+      },
+    },
+  },
+  plugins: [require('tailwindcss-animate')],
+}
+
+export default config
+\n\n// --- File: apps/dashboard/src/app/globals.css --- //
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -106,9 +269,7 @@
 .fade-up {
   animation: fade-up 0.35s ease both;
 }
-
-// === File: apps/dashboard/src/app/(operator)/layout.tsx ===
-
+\n\n// --- File: apps/dashboard/src/app/(operator)/layout.tsx --- //
 import { Sidebar } from '@/components/dashboard/sidebar'
 
 export default function OperatorLayout({ children }: { children: React.ReactNode }) {
@@ -120,9 +281,7 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/app/(operator)/page.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/app/(operator)/page.tsx --- //
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -243,9 +402,7 @@ export default function CommandCenterPage() {
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/app/(operator)/tasks/page.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/app/(operator)/tasks/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -377,9 +534,7 @@ export default function TasksPage() {
       )}
     </div>
   )
-}
-// === File: apps/dashboard/src/app/(operator)/drones/page.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/app/(operator)/drones/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -560,9 +715,7 @@ export default function DroneManagementPage() {
     </div>
   )
 }
-
-// === File: apps/dashboard/src/app/(operator)/config/page.tsx ===
-
+\n\n// --- File: apps/dashboard/src/app/(operator)/config/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -756,9 +909,7 @@ export default function ConfigPage() {
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/app/(operator)/audit/page.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/app/(operator)/audit/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -945,9 +1096,7 @@ export default function AuditPage() {
     </div>
   )
 }
-
-// === File: apps/dashboard/src/app/(operator)/simulator/page.tsx ===
-
+\n\n// --- File: apps/dashboard/src/app/(operator)/simulator/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -1658,9 +1807,7 @@ export default function SimulatorPage() {
   )
 }
 
-
-// === File: apps/dashboard/src/app/(operator)/validators/page.tsx ===
-
+\n\n// --- File: apps/dashboard/src/app/(operator)/validators/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -1852,9 +1999,7 @@ export default function ValidatorsPage() {
     </div>
   )
 }
-
-// === File: apps/dashboard/src/app/(verifier)/layout.tsx ===
-
+\n\n// --- File: apps/dashboard/src/app/(verifier)/layout.tsx --- //
 import { VerifierSidebar } from '@/components/dashboard/verifier-sidebar'
 
 export default function VerifierLayout({ children }: { children: React.ReactNode }) {
@@ -1866,9 +2011,7 @@ export default function VerifierLayout({ children }: { children: React.ReactNode
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/app/(verifier)/verifier/history/page.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/app/(verifier)/verifier/history/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -2056,9 +2199,7 @@ export default function HistoryPage() {
     </div>
   )
 }
-
-// === File: apps/dashboard/src/app/(verifier)/verifier/kb/page.tsx ===
-
+\n\n// --- File: apps/dashboard/src/app/(verifier)/verifier/kb/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -2277,9 +2418,7 @@ export default function KnowledgeBasePage() {
     </div>
   )
 }
-
-// === File: apps/dashboard/src/app/(verifier)/verifier/config/page.tsx ===
-
+\n\n// --- File: apps/dashboard/src/app/(verifier)/verifier/config/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -2392,9 +2531,7 @@ export default function VerifierConfigPage() {
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/app/(verifier)/verifier/page.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/app/(verifier)/verifier/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -2520,9 +2657,7 @@ export default function VerifierPage() {
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/app/layout.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/app/layout.tsx --- //
 import type { Metadata } from 'next'
 import './globals.css' // Make sure this imports your Tailwind CSS
 
@@ -2538,18 +2673,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>{children}</body>
     </html>
   )
-}
-// === File: apps/dashboard/src/lib/utils.ts ===
-
+}\n\n// --- File: apps/dashboard/src/lib/utils.ts --- //
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
-// === File: apps/dashboard/src/lib/constants.ts ===
-
+\n\n// --- File: apps/dashboard/src/lib/constants.ts --- //
 import { ElementType } from 'react'
 import { FileEdit, Clock, Send, CheckCircle2, AlertTriangle, Leaf, Sprout, Bug, Droplets, TrendingUp, Waves } from 'lucide-react'
 import { SubmissionTier, Priority } from '@/types'
@@ -2622,9 +2753,7 @@ export const LABEL_OPTIONS = [
 
 export const TASK_LEVEL_MAP: Record<string, number> = {
   TREE_COUNT: 1, AREA_CONDITION: 1, HEALTH_DIAGNOSIS: 2, ANOMALY_SEMI: 2, ANOMALY_CRITICAL: 3,
-}
-// === File: apps/dashboard/src/lib/mock-data.ts ===
-
+}\n\n// --- File: apps/dashboard/src/lib/mock-data.ts --- //
 import { Server, Cpu, ShieldCheck, Database, Radio, Leaf, Bug, Droplets, AlertTriangle, BookMarked } from 'lucide-react'
 import { Drone, AnomalyAlert, SystemNode, Task, VerifierCase, KbItem, TaskDetail } from '@/types'
 
@@ -2897,9 +3026,7 @@ export const TASK_DETAILS: Record<string, TaskDetail> = {
       amount: 0,
     },
   },
-}
-// === File: apps/dashboard/src/components/dashboard/create-task-modal.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/dashboard/create-task-modal.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -3075,9 +3202,7 @@ export function CreateTaskModal({ anomalyIndex, block, coordinates, anomalyType,
     </div>
   )
 }
-
-// === File: apps/dashboard/src/components/dashboard/map-overview.tsx ===
-
+\n\n// --- File: apps/dashboard/src/components/dashboard/map-overview.tsx --- //
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
@@ -3343,9 +3468,7 @@ export function MapOverview() {
     </div>
   )
 }
-
-// === File: apps/dashboard/src/components/dashboard/sidebar.tsx ===
-
+\n\n// --- File: apps/dashboard/src/components/dashboard/sidebar.tsx --- //
 'use client'
 
 import Link from 'next/link'
@@ -3395,9 +3518,7 @@ export function Sidebar() {
       </nav>
     </aside>
   )
-}
-// === File: apps/dashboard/src/components/dashboard/verifier-sidebar.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/dashboard/verifier-sidebar.tsx --- //
 'use client'
 
 import Link from 'next/link'
@@ -3444,9 +3565,7 @@ export function VerifierSidebar() {
       </nav>
     </aside>
   )
-}
-// === File: apps/dashboard/src/components/dashboard/mitra-detail-modal.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/dashboard/mitra-detail-modal.tsx --- //
 'use client'
 
 import { X, Zap, CheckCircle2, AlertTriangle, MapPin, Briefcase } from 'lucide-react'
@@ -3593,9 +3712,7 @@ export function MitraDetailModal({ mitraId, onClose }: MitraDetailModalProps) {
     </div>
   )
 }
-
-// === File: apps/dashboard/src/components/dashboard/task-detail-modal.tsx ===
-
+\n\n// --- File: apps/dashboard/src/components/dashboard/task-detail-modal.tsx --- //
 'use client'
 
 import { X, MapPin, Zap, Clock, Camera, Video, Shield, User, Cpu } from 'lucide-react'
@@ -4019,9 +4136,7 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
     </div>
   )
 }
-
-// === File: apps/dashboard/src/components/ui/page-header.tsx ===
-
+\n\n// --- File: apps/dashboard/src/components/ui/page-header.tsx --- //
 import React from 'react'
 
 interface PageHeaderProps {
@@ -4051,9 +4166,7 @@ export function PageHeader({ title, subtitle, icon: Icon, rightContent }: PageHe
       {rightContent && <div className="flex items-center gap-3">{rightContent}</div>}
     </header>
   )
-}
-// === File: apps/dashboard/src/components/ui/stat-card.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/ui/stat-card.tsx --- //
 import React from 'react'
 
 interface StatCardProps {
@@ -4083,9 +4196,7 @@ export function StatCard({ label, value, sub, icon: Icon, color }: StatCardProps
       )}
     </div>
   )
-}
-// === File: apps/dashboard/src/components/ui/badge.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/ui/badge.tsx --- //
 import React from 'react'
 
 interface BadgeProps {
@@ -4113,9 +4224,7 @@ export function Badge({ children, color, bg, border, size = 'sm', icon: Icon }: 
       {children}
     </span>
   )
-}
-// === File: apps/dashboard/src/components/ui/toggle.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/ui/toggle.tsx --- //
 import React from 'react'
 
 interface ToggleProps {
@@ -4141,9 +4250,7 @@ export function Toggle({ label, desc, on = false, onChange }: ToggleProps) {
       </button>
     </div>
   )
-}
-// === File: apps/dashboard/src/components/ui/field.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/ui/field.tsx --- //
 import React from 'react'
 
 interface FieldProps {
@@ -4176,9 +4283,7 @@ export function Field({ label, placeholder, value, onChange, mono = false, type 
       />
     </div>
   )
-}
-// === File: apps/dashboard/src/components/ui/live-dot.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/ui/live-dot.tsx --- //
 import React from 'react'
 
 export function LiveDot({ color = 'var(--primary)' }: { color?: string }) {
@@ -4188,9 +4293,7 @@ export function LiveDot({ color = 'var(--primary)' }: { color?: string }) {
       <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: color }} />
     </span>
   )
-}
-// === File: apps/dashboard/src/components/modals/mitra-detail-modal.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/modals/mitra-detail-modal.tsx --- //
 'use client'
 
 import { X, Zap, CheckCircle2, AlertTriangle, MapPin, Briefcase } from 'lucide-react'
@@ -4288,9 +4391,7 @@ export function MitraDetailModal({ mitraId, onClose }: MitraDetailModalProps) {
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/components/modals/create-task-modal.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/modals/create-task-modal.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -4430,9 +4531,7 @@ export function CreateTaskModal({
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/components/modals/task-detail-modal.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/components/modals/task-detail-modal.tsx --- //
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -4738,9 +4837,7 @@ export function TaskDetailDrawer({ taskId, onClose }: TaskDetailDrawerProps) {
     </>
   )
 }
-
-// === File: apps/dashboard/src/types/index.ts ===
-
+\n\n// --- File: apps/dashboard/src/types/index.ts --- //
 import { ElementType, ReactNode } from 'react'
 
 export type Severity = 'low' | 'medium' | 'high' | 'critical'
@@ -4934,9 +5031,7 @@ export interface ValidatorProfile {
   tokenBalance: number
   estate: string
   avatar: string
-}
-// === File: apps/dashboard/src/features/command-center/components/kpi-strip.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/features/command-center/components/kpi-strip.tsx --- //
 import { Wind, Layers, ScanLine, AlertTriangle, CheckCircle2, Zap } from 'lucide-react'
 import { StatCard } from '@/components/ui/stat-card'
 import { DASHBOARD_STATS, ANOMALY_FEED } from '@/lib/mock-data'
@@ -4954,9 +5049,7 @@ export function KpiStrip() {
       <StatCard label="Poin Didistribusikan" value={DASHBOARD_STATS.POIN_TODAY.toLocaleString()} sub="ke mitra lapangan" color="#eab308" icon={Zap} />
     </div>
   )
-}
-// === File: apps/dashboard/src/features/verification-studio/components/evidence-viewer.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/features/verification-studio/components/evidence-viewer.tsx --- //
 import { useState } from 'react'
 import { MapPin, CheckCircle2, Cpu, ChevronUp, ChevronDown, Activity, User, Camera, FileCheck, CheckSquare } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -5224,9 +5317,7 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
       </div>
     </div>
   )
-}
-// === File: apps/dashboard/src/features/verification-studio/components/grading-studio.tsx ===
-
+}\n\n// --- File: apps/dashboard/src/features/verification-studio/components/grading-studio.tsx --- //
 import { X, FileCheck, Award, Database, CheckCircle2 } from 'lucide-react'
 import { LABEL_OPTIONS } from '@/lib/constants'
 import { VerifierCase } from '@/types'
@@ -5373,9 +5464,75 @@ export function GradingStudio({ activeCase, showForm, onCloseForm, onUpdateVerdi
       </div>
     </div>
   )
-}
-// === File: apps/mitra/src/app/globals.css ===
+}\n\n// --- File: apps/dashboard/next-env.d.ts --- //
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
 
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/basic-features/typescript for more information.
+\n\n// --- File: apps/mitra/tailwind.config.ts --- //
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  darkMode: ['class'],
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
+      colors: {
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+      },
+      // Mobile-first touch targets
+      spacing: {
+        'touch': '44px',
+      },
+    },
+  },
+  plugins: [require('tailwindcss-animate')],
+}
+
+export default config
+\n\n// --- File: apps/mitra/src/app/globals.css --- //
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5422,9 +5579,7 @@ export function GradingStudio({ activeCase, showForm, onCloseForm, onUpdateVerdi
     @apply min-h-[44px] min-w-[44px];
   }
 }
-
-// === File: apps/mitra/src/app/layout.tsx ===
-
+\n\n// --- File: apps/mitra/src/app/layout.tsx --- //
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -5461,9 +5616,7 @@ export default function RootLayout({
     </html>
   )
 }
-
-// === File: apps/mitra/src/app/page.tsx ===
-
+\n\n// --- File: apps/mitra/src/app/page.tsx --- //
 import Link from 'next/link'
 import { Map, Zap, Star, Coins, AlertOctagon, ArrowRight, ShieldCheck, MapPin } from 'lucide-react'
 
@@ -5560,9 +5713,7 @@ export default function Home() {
     </main>
   )
 }
-
-// === File: apps/mitra/src/app/tasks/page.tsx ===
-
+\n\n// --- File: apps/mitra/src/app/tasks/page.tsx --- //
 import Link from 'next/link'
 import { MapPin, Search, Filter, AlertTriangle, ArrowRight, CheckCircle2, Navigation } from 'lucide-react'
 
@@ -5682,9 +5833,7 @@ export default function TasksPage() {
     </main>
   )
 }
-
-// === File: apps/mitra/src/app/tasks/[id]/page.tsx ===
-
+\n\n// --- File: apps/mitra/src/app/tasks/[id]/page.tsx --- //
 import Link from 'next/link'
 import { ChevronLeft, MapPin, Cpu, Clock, AlertTriangle, Route } from 'lucide-react'
 
@@ -5802,9 +5951,7 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
     </main>
   )
 }
-
-// === File: apps/mitra/src/app/tasks/[id]/submit/page.tsx ===
-
+\n\n// --- File: apps/mitra/src/app/tasks/[id]/submit/page.tsx --- //
 'use client'
 
 import { useState } from 'react'
@@ -6048,9 +6195,7 @@ export default function SubmitReportPage({ params }: { params: { id: string } })
     </main>
   )
 }
-
-// === File: apps/mitra/src/app/profile/page.tsx ===
-
+\n\n// --- File: apps/mitra/src/app/profile/page.tsx --- //
 import Link from 'next/link'
 import { Wallet, Gift, ArrowUpRight, History, Settings, BadgeAlert, Coins, CircleCheck, Medal } from 'lucide-react'
 
@@ -6164,18 +6309,14 @@ export default function ProfilePage() {
     </main>
   )
 }
-
-// === File: apps/mitra/src/lib/utils.ts ===
-
+\n\n// --- File: apps/mitra/src/lib/utils.ts --- //
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
-// === File: apps/mitra/src/components/bottom-nav.tsx ===
-
+\n\n// --- File: apps/mitra/src/components/bottom-nav.tsx --- //
 'use client'
 
 import Link from 'next/link'
@@ -6229,9 +6370,7 @@ export function BottomNav() {
     </div>
   )
 }
-
-// === File: apps/mitra/src/components/ui/TaskCard.tsx ===
-
+\n\n// --- File: apps/mitra/src/components/ui/TaskCard.tsx --- //
 // === File: apps/mitra/src/components/ui/TaskCard.tsx ===
 import React from 'react'
 import Link from 'next/link'
@@ -6300,4 +6439,39 @@ export function TaskCard({ task }: TaskCardProps) {
       </div>
     </Link>
   )
-}
+}\n\n// --- File: apps/mitra/next-env.d.ts --- //
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/basic-features/typescript for more information.
+\n\n// --- File: apps/api/src/index.ts --- //
+import 'dotenv/config'
+import { app } from './app'
+
+const PORT = process.env.PORT ?? 3001
+
+app.listen(PORT, () => {
+  console.log(`[api] running on http://localhost:${PORT}`)
+})
+\n\n// --- File: apps/api/src/app.ts --- //
+import express from 'express'
+import cors from 'cors'
+
+export const app = express()
+
+app.use(cors())
+app.use(express.json())
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' })
+})
+
+// Routes will be mounted here as they are built:
+// app.use('/api/v1/auth',       authRouter)
+// app.use('/api/v1/tasks',      tasksRouter)
+// app.use('/api/v1/submissions', submissionsRouter)
+// app.use('/api/v1/validators', validatorsRouter)
+// app.use('/api/v1/simulator',  simulatorRouter)
+// app.use('/api/v1/walrus',     walrusRouter)
+// app.use('/api/v1/stats',      statsRouter)

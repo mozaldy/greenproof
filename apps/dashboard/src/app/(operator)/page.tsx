@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { LiveDot } from '@/components/ui/live-dot'
 import { DRONE_FLEET, ANOMALY_FEED, SYSTEM_NODES, DASHBOARD_STATS } from '@/lib/mock-data'
 import { DRONE_STATUS, SEVERITY_META } from '@/lib/constants'
+import { TokenTreasuryWidget } from '@/components/dashboard/token-treasury-widget'
+import { KpiStrip } from '@/features/command-center/components/kpi-strip'
 
 const DroneCommandMap = dynamic(() => import('@/components/dashboard/map-overview').then(m => m.MapOverview), { ssr: false })
 
@@ -49,13 +51,11 @@ export default function CommandCenterPage() {
       />
 
       {/* KPI Strip */}
-      <div className="px-6 py-3 grid grid-cols-6 gap-3 border-b border-[var(--border)]">
-        <StatCard label="Drone Aktif" value={`${DASHBOARD_STATS.ACTIVE_DRONES}/6`} sub="dari 6 armada" color="#10b981" icon={Wind} />
-        <StatCard label="Coverage Hari Ini" value={`${DASHBOARD_STATS.TOTAL_COVERAGE_HA.toLocaleString()} ha`} sub="dari 12.400 ha total" color="#6366f1" icon={Layers} />
-        <StatCard label="Anomali Terdeteksi" value={DASHBOARD_STATS.TOTAL_ANOMALIES} sub="sejak 00:00 WIB" color="#f97316" icon={ScanLine} />
-        <StatCard label="Alert Kritis" value={ANOMALY_FEED.filter(a => a.severity === 'critical').length} sub="butuh tindak segera" color="#ef4444" icon={AlertTriangle} />
-        <StatCard label="Terverifikasi" value={DASHBOARD_STATS.VERIFIED_TODAY} sub="task selesai hari ini" color="var(--primary)" icon={CheckCircle2} />
-        <StatCard label="Poin Didistribusi" value={DASHBOARD_STATS.POIN_TODAY.toLocaleString()} sub="ke mitra lapangan" color="#eab308" icon={Zap} />
+      <KpiStrip />
+
+      {/* ── TREASURY WIDGET ── */}
+      <div className="px-6 py-4 border-b border-[var(--border)] bg-[var(--bg-base)]">
+        <TokenTreasuryWidget />
       </div>
 
       <div className="flex-1 grid grid-cols-[1fr_340px] min-h-0">
