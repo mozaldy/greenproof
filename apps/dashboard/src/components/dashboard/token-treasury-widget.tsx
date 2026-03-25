@@ -34,7 +34,6 @@ export function TokenTreasuryWidget() {
           {/* Kartu 1: Total Alokasi */}
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5 flex flex-col justify-center relative overflow-hidden group">
             <div className="flex items-center gap-2 mb-1 text-blue-500 dark:text-blue-400">
-              <Coins size={14} />
               <span className="text-[10px] font-bold uppercase tracking-widest">Total Alokasi Poin</span>
             </div>
             <div className="font-mono text-3xl font-black text-blue-600 dark:text-blue-400 my-1">
@@ -49,7 +48,6 @@ export function TokenTreasuryWidget() {
           {/* Kartu 2: Menunggu Verifikasi */}
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 flex flex-col justify-center relative overflow-hidden group">
             <div className="flex items-center gap-2 mb-1 text-amber-600 dark:text-amber-500">
-              <ShieldCheck size={14} />
               <span className="text-[10px] font-bold uppercase tracking-widest">Dalam Proses Verifikasi</span>
             </div>
             <div className="font-mono text-3xl font-black text-amber-600 dark:text-amber-500 my-1 flex items-baseline gap-2">
@@ -64,7 +62,6 @@ export function TokenTreasuryWidget() {
           {/* Kartu 3: Berhasil Dicairkan */}
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-5 flex flex-col justify-center relative overflow-hidden group">
             <div className="flex items-center gap-2 mb-1 text-emerald-600 dark:text-emerald-500">
-              <Gift size={14} />
               <span className="text-[10px] font-bold uppercase tracking-widest">Berhasil Dicairkan</span>
             </div>
             <div className="font-mono text-3xl font-black text-emerald-600 dark:text-emerald-500 my-1 flex items-baseline gap-2">

@@ -79,6 +79,7 @@ export interface FieldSubmission {
   catatanSingkat?: string
   gejala?: string[]
   keparahan?: number | string
+  severity?: string | number    
   estimasiLuas?: string
   catatanTambahan?: string
   diagnosisPrimer?: string
