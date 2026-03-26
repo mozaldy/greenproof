@@ -1,0 +1,3455 @@
+module greenproof::reward_engine {
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::String;
+    use sui::event;
+
+    // --- Structs ---
+    public struct ValidatorReputation has key {
+        id: UID,
+        company_id: String,
+        validator_addr: address,
+        tasks_completed: u64,
+        accuracy_score: u64, // Disimpan sebagai persentase 0-100
+        level: u8,
+        total_earned: u64
+    }
+
+    // --- Events ---
+    public struct LevelUp has copy, drop {
+        validator: address,
+        old_level: u8,
+        new_level: u8
+    }
+
+    public fun create_reputation(
+        company_id: String,
+        validator_addr: address,
+        ctx: &mut TxContext
+    ) {
+        let rep = ValidatorReputation {
+            id: object::new(ctx),
+            company_id,
+            validator_addr,
+            tasks_completed: 0,
+            accuracy_score: 100, // Mulai dari 100%
+            level: 1,
+            total_earned: 0
+        };
+        transfer::share_object(rep);
+    }
+
+    // Basis poin: 1=100%, 2=150%, 3=200%
+    public fun calculate_reward(base_amount: u64, validator_level: u8): u64 {
+        if (validator_level == 3) {
+            return base_amount * 200 / 100
+        } else if (validator_level == 2) {
+            return base_amount * 150 / 100
+        };
+        base_amount
+    }
+
+    public fun update_reputation(
+        rep: &mut ValidatorReputation,
+        was_correct: bool,
+        _ctx: &mut TxContext
+    ) {
+        // Logika MVP untuk Akurasi
+        let old_score = rep.accuracy_score;
+        let new_score = if (was_correct) {
+            if (old_score < 100) { old_score + 1 } else { 100 }
+        } else {
+            if (old_score > 5) { old_score - 5 } else { 0 }
+        };
+        
+        rep.accuracy_score = new_score;
+        
+        if (was_correct) {
+            rep.tasks_completed = rep.tasks_completed + 1;
+        };
+
+        // Logika Auto Promosi
+        let old_level = rep.level;
+        if (rep.level == 1 && rep.tasks_completed >= 50 && rep.accuracy_score >= 75) {
+            rep.level = 2;
+        } else if (rep.level == 2 && rep.tasks_completed >= 200 && rep.accuracy_score >= 85) {
+            rep.level = 3;
+        };
+
+        if (old_level != rep.level) {
+            event::emit(LevelUp {
+                validator: rep.validator_addr,
+                old_level,
+                new_level: rep.level
+            });
+        }
+    }
+}module greenproof::task_registry {
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::String;
+    use std::vector;
+    use std::option::{Self, Option};
+    use sui::event;
+    use greenproof::validator_token::{Self, CompanyToken};
+
+    // --- Errors ---
+    const E_NOT_AUTHORIZED: u64 = 1;
+    const E_INVALID_STATUS: u64 = 2;
+    const E_INSUFFICIENT_LEVEL: u64 = 3;
+    const E_INSUFFICIENT_BALANCE: u64 = 4;
+
+    // --- Structs ---
+    public struct TaskRegistry has key {
+        id: UID,
+        company_id: String
+    }
+
+    public struct Submission has store {
+        validator_id: address,
+        blob_id: String,
+        diagnosis: String,
+        qc_score: Option<u8>,
+        submitted_at: u64
+    }
+
+    public struct Task has key {
+        id: UID,
+        company_id: String,
+        title: String,
+        task_type: u8, // 0=kondisi, 1=hitung, 2=health, 3=anomali, 4=kritis
+        coordinates: vector<u8>,
+        reward_amount: u64,
+        min_validator_level: u8,
+        status: u8, // 0=draft, 1=pub, 2=prog, 3=flagged, 4=completed
+        submissions: vector<Submission>,
+        created_at: u64,
+        escrow_coin: Option<CompanyToken>
+    }
+
+    // --- Events ---
+    public struct TaskCreated has copy, drop { task_id: address, title: String, reward: u64 }
+    public struct SubmissionReceived has copy, drop { task_id: address, validator: address, blob_id: String }
+    public struct RewardReleased has copy, drop { task_id: address, validator: address, amount: u64 }
+
+    // Init Registry untuk perusahaan
+    public fun create_registry(company_id: String, ctx: &mut TxContext): TaskRegistry {
+        TaskRegistry {
+            id: object::new(ctx),
+            company_id
+        }
+    }
+
+    // Publish task dan kunci koin
+    public fun create_task(
+        _registry: &TaskRegistry,
+        company_id: String,
+        title: String,
+        task_type: u8,
+        coordinates: vector<u8>,
+        reward_amount: u64,
+        min_validator_level: u8,
+        coin: CompanyToken,
+        ctx: &mut TxContext
+    ) {
+        assert!(validator_token::value(&coin) == reward_amount, E_INSUFFICIENT_BALANCE);
+        
+        let task = Task {
+            id: object::new(ctx),
+            company_id,
+            title,
+            task_type,
+            coordinates,
+            reward_amount,
+            min_validator_level,
+            status: 1, // Published
+            submissions: vector::empty(),
+            created_at: tx_context::epoch_timestamp_ms(ctx),
+            escrow_coin: option::some(coin)
+        };
+
+        event::emit(TaskCreated {
+            task_id: object::uid_to_address(&task.id),
+            title: task.title,
+            reward: task.reward_amount
+        });
+
+        transfer::share_object(task);
+    }
+
+    // Claim mengubah status
+    public fun claim_task(task: &mut Task, _ctx: &mut TxContext) {
+        assert!(task.status == 1, E_INVALID_STATUS);
+        task.status = 2; // In Progress
+    }
+
+    // Submit eviden
+    public fun submit_validation(
+        task: &mut Task,
+        blob_id: String,
+        diagnosis: String,
+        ctx: &mut TxContext
+    ) {
+        assert!(task.status == 2, E_INVALID_STATUS);
+        let validator_id = tx_context::sender(ctx);
+
+        let sub = Submission {
+            validator_id,
+            blob_id,
+            diagnosis,
+            qc_score: option::none(),
+            submitted_at: tx_context::epoch_timestamp_ms(ctx)
+        };
+
+        vector::push_back(&mut task.submissions, sub);
+
+        event::emit(SubmissionReceived {
+            task_id: object::uid_to_address(&task.id),
+            validator: validator_id,
+            blob_id
+        });
+    }
+
+    // Servis backend API memanggil ini setelah LLM lulus
+    public fun release_reward(
+        task: &mut Task,
+        validator_addr: address,
+        _ctx: &mut TxContext
+    ): CompanyToken {
+        assert!(task.status == 2 || task.status == 3, E_INVALID_STATUS);
+        task.status = 4; // Completed
+        
+        let coin = option::extract(&mut task.escrow_coin);
+        
+        event::emit(RewardReleased {
+            task_id: object::uid_to_address(&task.id),
+            validator: validator_addr,
+            amount: validator_token::value(&coin)
+        });
+
+        coin // Return koin ke servis, servis yang mengirimkannya ke wallet validator
+    }
+
+    public fun flag_task(task: &mut Task, _reason: String, _ctx: &mut TxContext) {
+        assert!(task.status == 2, E_INVALID_STATUS);
+        task.status = 3; // Flagged
+    }
+}module greenproof::validator_token {
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::String;
+    use sui::event;
+
+    // --- Errors ---
+    const E_INSUFFICIENT_BALANCE: u64 = 1;
+
+    // --- Objek Admin (Hanya untuk GreenProof Deployer) ---
+    public struct GreenproofAdminCap has key, store {
+        id: UID
+    }
+
+    // --- Objek Treasury (Satu per Perusahaan) ---
+    public struct CompanyTreasuryCap has key, store {
+        id: UID,
+        company_id: String,
+        name: String,
+        symbol: String,
+        total_supply: u64
+    }
+
+    // --- Objek Token (Closed-loop) ---
+    public struct CompanyToken has key, store {
+        id: UID,
+        company_id: String,
+        amount: u64
+    }
+
+    // --- Events ---
+    public struct TokenMinted has copy, drop {
+        company_id: String,
+        amount: u64,
+        recipient: address,
+        task_id: String
+    }
+
+    public struct TokenBurned has copy, drop {
+        company_id: String,
+        amount: u64
+    }
+
+    // Init: Berikan AdminCap ke wallet deployer
+    fun init(ctx: &mut TxContext) {
+        transfer::transfer(
+            GreenproofAdminCap { id: object::new(ctx) },
+            tx_context::sender(ctx)
+        );
+    }
+
+    // Factory: Deployer membuat token baru untuk onboarding perusahaan
+    public fun create_company_token(
+        _admin: &GreenproofAdminCap,
+        company_id: String,
+        name: String,
+        symbol: String,
+        ctx: &mut TxContext
+    ): CompanyTreasuryCap {
+        CompanyTreasuryCap {
+            id: object::new(ctx),
+            company_id,
+            name,
+            symbol,
+            total_supply: 0
+        }
+    }
+
+    // Minting: Dipanggil oleh wallet perusahaan (pemegang TreasuryCap)
+    public fun mint(
+        cap: &mut CompanyTreasuryCap,
+        amount: u64,
+        task_id: String,
+        ctx: &mut TxContext
+    ): CompanyToken {
+        cap.total_supply = cap.total_supply + amount;
+        
+        event::emit(TokenMinted {
+            company_id: cap.company_id,
+            amount,
+            recipient: tx_context::sender(ctx),
+            task_id
+        });
+
+        CompanyToken {
+            id: object::new(ctx),
+            company_id: cap.company_id,
+            amount
+        }
+    }
+
+    // Merge: Operasi standar koin
+    public fun join(self: &mut CompanyToken, coin: CompanyToken) {
+        let CompanyToken { id, company_id: _, amount } = coin;
+        self.amount = self.amount + amount;
+        object::delete(id);
+    }
+
+    // Split: Membagi saldo
+    public fun split(self: &mut CompanyToken, split_amount: u64, ctx: &mut TxContext): CompanyToken {
+        assert!(self.amount >= split_amount, E_INSUFFICIENT_BALANCE);
+        self.amount = self.amount - split_amount;
+        CompanyToken {
+            id: object::new(ctx),
+            company_id: self.company_id,
+            amount: split_amount
+        }
+    }
+
+    // Getters
+    public fun value(token: &CompanyToken): u64 { token.amount }
+    public fun company_id(token: &CompanyToken): String { token.company_id }
+}generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN_GREENPROOF
+  OPERATOR
+  SUPERVISOR
+  AGRONOMIS
+  FIELD_OBSERVER // Level 1
+  FIELD_ANALYST // Level 2
+  FIELD_EXPERT // Level 3
+}
+
+enum TaskType {
+  TREE_COUNT // hitungan pohon              — min Level 1
+  AREA_CONDITION // kondisi umum area            — min Level 1
+  HEALTH_DIAGNOSIS // diagnosis kesehatan pohon    — min Level 2
+  ANOMALY_SEMI // anomali semi-kritikal         — min Level 2
+  ANOMALY_CRITICAL // anomali kritikal              — min Level 3
+}
+
+enum TaskStatus {
+  DRAFT
+  PENDING_APPROVAL // menunggu Supervisor
+  PUBLISHED // on-chain, terlihat mitra
+  IN_PROGRESS // ada klaim aktif
+  COMPLETED // semua klaim selesai & verified
+  FLAGGED // dikirim ke Agronomis
+  EXPIRED
+  CANCELLED
+}
+
+enum SubmissionStatus {
+  PENDING
+  LLM_CHECKING
+  VERIFIED
+  REJECTED
+  FLAGGED
+  REWARDED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Company {
+  id               String   @id @default(cuid())
+  name             String
+  subscriptionTier String   @default("starter") // starter | growth | enterprise
+  aiMode           String   @default("greenproof") // greenproof | own_model
+  sealPolicyId     String? // Seal policy ID untuk akses foto mereka
+  createdAt        DateTime @default(now())
+  tokenSymbol      String?
+  tokenName        String?
+  contractAddress  String?  // SUI package ID
+  treasuryCapId    String?  // CompanyTreasuryCap object ID
+  taskRegistryId   String?  // TaskRegistry object ID
+
+  users              User[]
+  tasks              Task[]
+  validators         ValidatorProfile[]
+  managedValidators  Validator[]
+  auditLogs          AuditLog[]
+}
+
+model User {
+  id         String   @id @default(cuid())
+  companyId  String? // null untuk Admin GreenProof
+  googleId   String   @unique
+  email      String   @unique
+  name       String
+  role       Role
+  suiAddress String? // di-derive saat zkLogin pertama kali (mitra saja)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  company          Company?          @relation(fields: [companyId], references: [id])
+  validatorProfile ValidatorProfile?
+  submissions      Submission[]
+  verdicts         Verdict[]
+}
+
+model ValidatorProfile {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  companyId         String
+  level             Int     @default(1) // 1 | 2 | 3
+  totalTasks        Int     @default(0)
+  accurateCount     Int     @default(0) // task yang terbukti benar
+  accuracyRate      Float   @default(0) // accurateCount / totalTasks
+  tokenBalance      Int     @default(0) // cache off-chain
+  consecutiveMonths Int     @default(0) // syarat naik Level 3
+
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+}
+
+model Task {
+  id            String     @id @default(cuid())
+  companyId     String
+  onChainTaskId String?    @unique // ID di SUI setelah publish
+  title         String
+  type          TaskType
+  priority      String     @default("normal") // normal | critical
+  coordinates   Json // { lat: Float, lng: Float }
+  description   String
+  requiredLevel Int        @default(1)
+  rewardTokens  Int
+  maxClaims     Int        @default(1)
+  currentClaims Int        @default(0)
+  status        TaskStatus @default(DRAFT)
+  anomalySource   String?  // "drone_simulator" | "manual" | "ai_model"
+  anomalyRaw      Json?    // raw output drone/AI — tidak di-expose ke mitra
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  publishedAt     DateTime?
+  /// Canonical SUI Task object ID. Use this in all new code. onChainTaskId is a legacy alias.
+  suiTaskId       String?  @unique
+  lat             Float?
+  lng             Float?
+  blok            String?
+  estate          String?
+  txHash          String?           // publish transaction digest
+  createdByUserId String?
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  submissions Submission[]
+}
+
+model Submission {
+  id              String           @id @default(cuid())
+  taskId          String
+  userId          String
+  onChainSubmitId String?
+  status          SubmissionStatus @default(PENDING)
+  photos          Json // [{ walrusObjectId, sealPolicyId, gpsLat, gpsLng, timestamp }]
+  diagnosis       String
+  diagnosisCode   String? // e.g. "GANODERMA_SUSPECT"
+  gpsLat          Float
+  gpsLng          Float
+  gpsDistanceM    Float? // jarak dari koordinat task (meter)
+  llmQualityScore Float? // 0.0 - 1.0
+  llmQualityNote  String?
+  llmFlags        String[] // ["GPS_TOO_FAR","PHOTO_IRRELEVANT",...]
+  tokenAwarded    Int?
+  submittedAt     DateTime         @default(now())
+  verifiedAt      DateTime?
+
+  task    Task    @relation(fields: [taskId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  verdict Verdict?
+}
+
+model Verdict {
+  id             String   @id @default(cuid())
+  submissionId   String   @unique
+  agronomistId   String
+  verdict        String // "CONFIRMED" | "REJECTED" | "INCONCLUSIVE"
+  diagnosisCode  String?
+  notes          String
+  isTrainingData Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id])
+  agronomist User       @relation(fields: [agronomistId], references: [id])
+}
+
+model AnomalyLog {
+  id           String   @id @default(cuid())
+  companyId    String
+  estateInfo   Json // { name, location, areaHa, centerLat, centerLng }
+  rawOutput    Json // array anomali yang di-generate LLM
+  tasksCreated Int      @default(0)
+  generatedAt  DateTime @default(now())
+}
+
+model Validator {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  phone      String?
+  suiAddress String?  @unique
+  level      Int      @default(1)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  company    Company  @relation(fields: [companyId], references: [id])
+}
+
+model SealAccessLog {
+  id        String   @id @default(cuid())
+  companyId String
+  policyId  String
+  grantedTo String
+  action    String   // "GRANT" | "REVOKE"
+  service   String?  // human-readable service name
+  blobCount Int      @default(0)
+  purpose   String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String?
+  actorId    String?
+  actorName  String?
+  action     String
+  entityType String
+  entityId   String?
+  estate     String?
+  txHash     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  company    Company? @relation(fields: [companyId], references: [id])
+}
+import { Router, type Router as ExpressRouter } from 'express'
+import { prisma } from '../lib/prisma'
+import { requireAuth } from '../middleware/auth'
+
+export const auditRouter: ExpressRouter = Router()
+auditRouter.use(requireAuth)
+
+/** GET /api/v1/audit — paginated audit log for the company */
+auditRouter.get('/', async (req, res, next) => {
+  try {
+    const { type, estate, page = '1', limit = '50' } = req.query as Record<string, string>
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const where: Record<string, unknown> = { companyId: req.auth!.companyId! }
+    if (type) where.action = type
+    if (estate) where.estate = estate
+
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.auditLog.count({ where }),
+    ])
+    res.json({ logs, total, page: parseInt(page) })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** GET /api/v1/audit/seal — Seal access log for the company */
+auditRouter.get('/seal', async (req, res, next) => {
+  try {
+    const logs = await prisma.sealAccessLog.findMany({
+      where: { companyId: req.auth!.companyId! },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+    res.json(logs)
+  } catch (err) {
+    next(err)
+  }
+})
+import { Router, type Router as ExpressRouter } from 'express'
+import { z } from 'zod'
+import { prisma } from '../lib/prisma'
+import * as sealService from '../services/seal.service'
+import { requireAuth, requireRole } from '../middleware/auth'
+
+export const configRouter: ExpressRouter = Router()
+configRouter.use(requireAuth)
+
+/** GET /api/v1/config — company configuration */
+configRouter.get('/', async (req, res, next) => {
+  try {
+    const company = await prisma.company.findUniqueOrThrow({
+      where: { id: req.auth!.companyId! },
+    })
+    const sealLogs = await prisma.sealAccessLog.findMany({
+      where: { companyId: company.id },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    })
+    res.json({ aiMode: company.aiMode, sealPolicyId: company.sealPolicyId, sealLogs })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** PATCH /api/v1/config/ai-mode — toggle AI mode A (own model) or B (GreenProof AI) */
+configRouter.patch(
+  '/ai-mode',
+  requireRole('OPERATOR'),
+  async (req, res, next) => {
+    try {
+      const { mode } = z.object({ mode: z.enum(['A', 'B']) }).parse(req.body)
+      const company = await prisma.company.findUniqueOrThrow({
+        where: { id: req.auth!.companyId! },
+      })
+
+      if (company.sealPolicyId) {
+        await sealService.toggleAiAccess({
+          companyId: company.id,
+          policyId: company.sealPolicyId,
+          enable: mode === 'B',
+        })
+      }
+
+      const updated = await prisma.company.update({
+        where: { id: company.id },
+        data: { aiMode: mode === 'A' ? 'own_model' : 'greenproof' },
+      })
+
+      await prisma.auditLog.create({
+        data: {
+          companyId: company.id,
+          actorId: req.auth!.userId,
+          action: 'config_changed',
+          entityType: 'Company',
+          entityId: company.id,
+          metadata: { aiMode: mode },
+        },
+      })
+
+      res.json({ aiMode: updated.aiMode })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+import { Router, type Router as ExpressRouter } from 'express'
+import { z } from 'zod'
+import { prisma } from '../lib/prisma'
+import * as suiService from '../services/sui.service'
+import * as sealService from '../services/seal.service'
+import { issueToken, requireAuth } from '../middleware/auth'
+
+export const onboardingRouter: ExpressRouter = Router()
+
+const CompanySchema = z.object({
+  companyName: z.string().min(3),
+  tokenName: z.string().min(2),
+  tokenSymbol: z.string().min(2).max(10).toUpperCase(),
+  operatorEmail: z.string().email(),
+  operatorName: z.string().min(2),
+  aiMode: z.enum(['A', 'B']).default('B'),
+})
+
+/**
+ * POST /api/v1/onboarding/company
+ * Creates company: DB row + SUI token + TaskRegistry + Seal policy.
+ * Returns JWT for the initial Operator user.
+ */
+onboardingRouter.post('/company', async (req, res, next) => {
+  try {
+    const body = CompanySchema.parse(req.body)
+
+    // Check token symbol uniqueness
+    const existing = await prisma.company.findFirst({
+      where: { tokenSymbol: body.tokenSymbol },
+    })
+    if (existing) {
+      return res.status(409).json({ error: 'Token symbol already in use', code: 'SYMBOL_TAKEN' })
+    }
+
+    // Step 1: Create SUI company token
+    const { treasuryCapId, txHash: tokenTxHash } = await suiService.createCompanyToken({
+      companyId: 'pending',
+      name: body.tokenName,
+      symbol: body.tokenSymbol,
+    })
+
+    // Step 2: Create TaskRegistry
+    const { registryId, txHash: registryTxHash } = await suiService.createTaskRegistry('pending')
+
+    // Step 3: Create Seal policy (non-blocking — partial success is OK)
+    let sealPolicyId: string | null = null
+    try {
+      const { policyId } = await sealService.provisionCompanyPolicy({
+        companyId: 'pending',
+        companyWalletAddress: treasuryCapId,
+        includeAiService: body.aiMode === 'B',
+      })
+      sealPolicyId = policyId
+    } catch (err) {
+      console.warn('[onboarding] Seal policy creation failed, continuing:', err)
+    }
+
+    // Step 4: Save to DB
+    const company = await prisma.company.create({
+      data: {
+        name: body.companyName,
+        tokenName: body.tokenName,
+        tokenSymbol: body.tokenSymbol,
+        contractAddress: process.env.GREENPROOF_PACKAGE_ID,
+        treasuryCapId,
+        taskRegistryId: registryId,
+        sealPolicyId,
+        aiMode: body.aiMode === 'A' ? 'own_model' : 'greenproof',
+        subscriptionTier: 'starter',
+      },
+    })
+
+    // Step 5: Create initial Operator user
+    const user = await prisma.user.create({
+      data: {
+        companyId: company.id,
+        email: body.operatorEmail,
+        name: body.operatorName,
+        role: 'OPERATOR',
+        isActive: true,
+        googleId: `onboard-${company.id}`,
+      },
+    })
+
+    // Step 6: Audit log
+    await prisma.auditLog.create({
+      data: {
+        companyId: company.id,
+        actorId: user.id,
+        actorName: user.name,
+        action: 'company_onboarded',
+        entityType: 'Company',
+        entityId: company.id,
+        metadata: { tokenTxHash, registryTxHash, sealPolicyId },
+      },
+    })
+
+    const token = issueToken({
+      userId: user.id,
+      companyId: company.id,
+      role: 'OPERATOR',
+    })
+
+    res.status(201).json({
+      companyId: company.id,
+      contractAddress: company.contractAddress,
+      taskRegistryId: registryId,
+      sealPolicyId,
+      deployTxHash: tokenTxHash,
+      registryTxHash,
+      tokenSymbol: company.tokenSymbol,
+      tokenName: company.tokenName,
+      token,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/**
+ * GET /api/v1/me
+ * Returns current user + company context.
+ */
+onboardingRouter.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: req.auth!.userId },
+      include: { company: true },
+    })
+    res.json({ user, company: user.company })
+  } catch (err) {
+    next(err)
+  }
+})
+import { Router, type Router as ExpressRouter } from 'express'
+import { z } from 'zod'
+import { prisma } from '../lib/prisma'
+import * as llmService from '../services/llm.service'
+import { requireAuth, requireRole } from '../middleware/auth'
+import type { Prisma } from '@greenproof/db'
+
+export const simulatorRouter: ExpressRouter = Router()
+simulatorRouter.use(requireAuth, requireRole('OPERATOR', 'SUPERVISOR'))
+
+const GenerateSchema = z.object({
+  estate: z.string(),
+  blockIds: z.array(z.string()),
+  count: z.number().int().min(1).max(20).default(5),
+  includeKritikal: z.boolean().default(false),
+})
+
+/** POST /api/v1/simulator/generate — generate drone anomaly simulation */
+simulatorRouter.post('/generate', async (req, res, next) => {
+  try {
+    const body = GenerateSchema.parse(req.body)
+    const anomalies = await llmService.simulateAnomalies(body)
+
+    const log = await prisma.anomalyLog.create({
+      data: {
+        companyId: req.auth!.companyId!,
+        estateInfo: { estate: body.estate, blockIds: body.blockIds },
+        rawOutput: anomalies as unknown as Prisma.InputJsonValue,
+        tasksCreated: 0,
+      },
+    })
+
+    res.json({ tasks: anomalies, anomalyLogId: log.id, generatedAt: log.generatedAt })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** POST /api/v1/simulator/create-tasks — convert anomaly log into Task rows (DRAFT) */
+simulatorRouter.post('/create-tasks', async (req, res, next) => {
+  try {
+    const { anomalyLogId } = z.object({ anomalyLogId: z.string() }).parse(req.body)
+    const log = await prisma.anomalyLog.findUniqueOrThrow({ where: { id: anomalyLogId } })
+    const anomalies = log.rawOutput as Array<Record<string, unknown>>
+
+    const created = await Promise.all(
+      anomalies.map(a =>
+        prisma.task.create({
+          data: {
+            companyId: req.auth!.companyId!,
+            title: `${String(a.anomalyType)} — ${String((log.estateInfo as Record<string, unknown>).estate ?? '')}`,
+            type: (a.suggestedTaskType as string) as any,
+            rewardTokens: 100,
+            requiredLevel: 1,
+            lat: Number(a.lat),
+            lng: Number(a.lng),
+            estate: String((log.estateInfo as Record<string, unknown>).estate ?? ''),
+            coordinates: { lat: Number(a.lat), lng: Number(a.lng) },
+            description: String(a.description ?? ''),
+            anomalySource: 'drone_simulator',
+            anomalyRaw: a as unknown as Prisma.InputJsonValue,
+            status: 'DRAFT',
+            createdByUserId: req.auth!.userId,
+          },
+        })
+      )
+    )
+
+    await prisma.anomalyLog.update({
+      where: { id: anomalyLogId },
+      data: { tasksCreated: created.length },
+    })
+    res.status(201).json({ created: created.map(t => t.id) })
+  } catch (err) {
+    next(err)
+  }
+})
+import { Router, type Router as ExpressRouter } from 'express'
+import multer from 'multer'
+import { z } from 'zod'
+import { prisma } from '../lib/prisma'
+import * as walrusService from '../services/walrus.service'
+import * as sealService from '../services/seal.service'
+import * as suiService from '../services/sui.service'
+import * as llmService from '../services/llm.service'
+import { requireAuth } from '../middleware/auth'
+import { GPS_MAX_DISTANCE_M } from '@greenproof/shared'
+import { retrieveFromWalrus } from '@greenproof/sui-client'
+
+export const submissionsRouter: ExpressRouter = Router()
+submissionsRouter.use(requireAuth)
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { files: 5, fileSize: 10 * 1024 * 1024 },
+})
+
+const SubmitSchema = z.object({
+  diagnosis: z.string().min(5),
+  gpsLat: z.coerce.number(),
+  gpsLng: z.coerce.number(),
+  symptoms: z.string().optional(),
+  recommendation: z.string().optional(),
+})
+
+function haversineMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6_371_000
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+/**
+ * POST /api/v1/tasks/:id/submit
+ * Validator submits photo evidence + diagnosis for a task.
+ * Photos are uploaded to Walrus with Seal encryption.
+ * LLM quality gate runs asynchronously after response.
+ */
+submissionsRouter.post(
+  '/tasks/:id/submit',
+  upload.array('photos', 5),
+  async (req, res, next) => {
+    try {
+      const task = await prisma.task.findUniqueOrThrow({
+        where: { id: req.params.id },
+        include: { company: true },
+      })
+
+      if (!['PUBLISHED', 'IN_PROGRESS'].includes(task.status)) {
+        return res.status(400).json({
+          error: 'Task is not accepting submissions',
+          code: 'INVALID_STATUS',
+        })
+      }
+
+      const body = SubmitSchema.parse(req.body)
+      const files = req.files as Express.Multer.File[]
+      if (!files?.length) {
+        return res.status(400).json({
+          error: 'At least one photo required',
+          code: 'NO_PHOTOS',
+        })
+      }
+
+      // GPS distance check
+      let gpsDistanceM = 0
+      if (task.lat && task.lng) {
+        gpsDistanceM = haversineMeters(body.gpsLat, body.gpsLng, task.lat, task.lng)
+        if (gpsDistanceM > GPS_MAX_DISTANCE_M) {
+          return res.status(400).json({
+            error: `GPS location too far from task center (${Math.round(gpsDistanceM)}m, max ${GPS_MAX_DISTANCE_M}m)`,
+            code: 'GPS_TOO_FAR',
+          })
+        }
+      }
+
+      // Upload photos to Walrus (with Seal encryption if policy exists)
+      const policyId = task.company.sealPolicyId
+      const blobIds: string[] = []
+      const photoMeta: Array<{
+        blobId: string
+        gpsLat: number
+        gpsLng: number
+        timestamp: string
+      }> = []
+
+      for (const file of files) {
+        const data = policyId
+          ? await sealService.encryptPhoto(file.buffer, policyId)
+          : file.buffer
+        const { blobId } = await walrusService.uploadPhoto(data, file.mimetype)
+        blobIds.push(blobId)
+        photoMeta.push({
+          blobId,
+          gpsLat: body.gpsLat,
+          gpsLng: body.gpsLng,
+          timestamp: new Date().toISOString(),
+        })
+      }
+
+      // Submit first blob_id on-chain
+      let onChainTxHash: string | undefined
+      if (task.suiTaskId) {
+        try {
+          const result = await suiService.submitValidationOnChain({
+            suiTaskId: task.suiTaskId,
+            blobId: blobIds[0],
+            diagnosis: body.diagnosis,
+            validatorAddress: req.auth!.suiAddress ?? '0x0',
+            validatorPrivKeyHex: process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY ?? '',
+          })
+          onChainTxHash = result.txHash
+        } catch (chainErr) {
+          console.warn('[submissions] on-chain submit failed, continuing:', chainErr)
+        }
+      }
+
+      // Save submission to DB
+      const submission = await prisma.submission.create({
+        data: {
+          taskId: task.id,
+          userId: req.auth!.userId,
+          status: 'PENDING',
+          photos: photoMeta,
+          diagnosis: body.diagnosis,
+          gpsLat: body.gpsLat,
+          gpsLng: body.gpsLng,
+          gpsDistanceM,
+          onChainSubmitId: onChainTxHash,
+        },
+      })
+
+      // Fire-and-forget async QC (does not block the response)
+      setImmediate(() => runAsyncQc(submission.id))
+
+      res.status(201).json({
+        submissionId: submission.id,
+        blobIds,
+        txHash: onChainTxHash,
+        status: 'pending_qc',
+      })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
+/** GET /api/v1/submissions/:id */
+submissionsRouter.get('/:id', async (req, res, next) => {
+  try {
+    const sub = await prisma.submission.findUniqueOrThrow({
+      where: { id: req.params.id },
+    })
+    res.json(sub)
+  } catch (err) {
+    next(err)
+  }
+})
+
+/**
+ * Async LLM quality gate. Called via setImmediate after submission is saved.
+ * On QC pass: releases on-chain reward, marks submission VERIFIED.
+ * On FLAG_FOR_REVIEW: marks submission FLAGGED, flags task on-chain.
+ * On REJECT: marks submission REJECTED.
+ */
+async function runAsyncQc(submissionId: string): Promise<void> {
+  try {
+    await prisma.submission.update({
+      where: { id: submissionId },
+      data: { status: 'LLM_CHECKING' },
+    })
+
+    const sub = await prisma.submission.findUniqueOrThrow({
+      where: { id: submissionId },
+      include: {
+        task: { include: { company: true } },
+        user: true,
+      },
+    })
+
+    // Fetch up to 3 photos from Walrus for LLM analysis
+    const photos = (sub.photos as Array<{ blobId: string }>) ?? []
+    const photoBase64s: string[] = []
+    for (const p of photos.slice(0, 3)) {
+      try {
+        const buf = await retrieveFromWalrus(p.blobId)
+        photoBase64s.push(buf.toString('base64'))
+      } catch (err) {
+        console.warn('[QC] failed to fetch photo', p.blobId, err)
+      }
+    }
+
+    const qcResult = await llmService.runQualityGate({
+      diagnosis: sub.diagnosis,
+      taskTitle: sub.task.title,
+      taskType: sub.task.type,
+      gpsDistanceM: sub.gpsDistanceM ?? 0,
+      photoBase64s,
+    })
+
+    if (qcResult.recommendedAction === 'APPROVE') {
+      let rewardTxHash: string | undefined
+      if (sub.task.suiTaskId) {
+        try {
+          const r = await suiService.releaseReward({
+            suiTaskId: sub.task.suiTaskId,
+            validatorAddress: sub.user.suiAddress ?? '0x0',
+          })
+          rewardTxHash = r.txHash
+        } catch (err) {
+          console.error('[QC] releaseReward failed:', err)
+        }
+      }
+      await prisma.submission.update({
+        where: { id: submissionId },
+        data: {
+          status: 'VERIFIED',
+          llmQualityScore: qcResult.qualityScore / 100,
+          llmQualityNote: qcResult.reasoning,
+          llmFlags: qcResult.flags,
+          tokenAwarded: sub.task.rewardTokens,
+          verifiedAt: new Date(),
+          onChainSubmitId: rewardTxHash ?? sub.onChainSubmitId,
+        },
+      })
+      await prisma.task.update({
+        where: { id: sub.taskId },
+        data: { status: 'COMPLETED' },
+      })
+      await prisma.auditLog.create({
+        data: {
+          companyId: sub.task.companyId,
+          actorId: sub.userId,
+          action: 'qc_pass',
+          entityType: 'Submission',
+          entityId: submissionId,
+          txHash: rewardTxHash,
+          metadata: { score: qcResult.qualityScore, reasoning: qcResult.reasoning },
+        },
+      })
+    } else if (qcResult.recommendedAction === 'FLAG_FOR_REVIEW') {
+      await prisma.submission.update({
+        where: { id: submissionId },
+        data: {
+          status: 'FLAGGED',
+          llmQualityScore: qcResult.qualityScore / 100,
+          llmQualityNote: qcResult.reasoning,
+          llmFlags: qcResult.flags,
+        },
+      })
+      await prisma.task.update({
+        where: { id: sub.taskId },
+        data: { status: 'FLAGGED' },
+      })
+      if (sub.task.suiTaskId) {
+        try {
+          await suiService.flagTaskOnChain(sub.task.suiTaskId, qcResult.reasoning)
+        } catch {}
+      }
+      await prisma.auditLog.create({
+        data: {
+          companyId: sub.task.companyId,
+          action: 'flagged',
+          entityType: 'Submission',
+          entityId: submissionId,
+          metadata: { flags: qcResult.flags, reasoning: qcResult.reasoning },
+        },
+      })
+    } else {
+      // REJECT
+      await prisma.submission.update({
+        where: { id: submissionId },
+        data: {
+          status: 'REJECTED',
+          llmQualityScore: qcResult.qualityScore / 100,
+          llmQualityNote: qcResult.reasoning,
+        },
+      })
+    }
+  } catch (err) {
+    console.error('[AsyncQC] unhandled error for submission', submissionId, err)
+    // Reset to PENDING so it can be retried manually
+    await prisma.submission
+      .update({ where: { id: submissionId }, data: { status: 'PENDING' } })
+      .catch(() => {})
+  }
+}
+import { Router, type Router as ExpressRouter } from 'express'
+import { z } from 'zod'
+import { prisma } from '../lib/prisma'
+import * as suiService from '../services/sui.service'
+import { requireAuth, requireRole } from '../middleware/auth'
+import { TASK_MIN_LEVEL } from '@greenproof/shared'
+
+export const tasksRouter: ExpressRouter = Router()
+tasksRouter.use(requireAuth)
+
+const TASK_TYPE_TO_INT: Record<string, number> = {
+  AREA_CONDITION: 0,
+  TREE_COUNT: 1,
+  HEALTH_DIAGNOSIS: 2,
+  ANOMALY_SEMI: 3,
+  ANOMALY_CRITICAL: 4,
+}
+
+const CreateTaskSchema = z.object({
+  title: z.string().min(5),
+  taskType: z.enum(['TREE_COUNT', 'AREA_CONDITION', 'HEALTH_DIAGNOSIS', 'ANOMALY_SEMI', 'ANOMALY_CRITICAL']),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  blok: z.string(),
+  estate: z.string(),
+  rewardAmount: z.number().int().positive(),
+  description: z.string().optional(),
+  publish: z.boolean().default(false),
+})
+
+/** GET /api/v1/tasks — paginated task list for the authenticated company */
+tasksRouter.get('/', async (req, res, next) => {
+  try {
+    const {
+      status,
+      estate,
+      search,
+      page = '1',
+      limit = '20',
+    } = req.query as Record<string, string>
+
+    const companyId = req.auth!.companyId
+    if (!companyId) return res.status(400).json({ error: 'Company context required', code: 'NO_COMPANY' })
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    const where: Record<string, unknown> = { companyId }
+    if (status && status !== 'all') where.status = status
+    if (estate) where.estate = estate
+    if (search) where.title = { contains: search, mode: 'insensitive' }
+
+    const [tasks, total] = await Promise.all([
+      prisma.task.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        orderBy: { createdAt: 'desc' },
+        include: { _count: { select: { submissions: true } } },
+      }),
+      prisma.task.count({ where }),
+    ])
+
+    res.json({
+      tasks: tasks.map(t => ({
+        id: t.id,
+        suiTaskId: t.suiTaskId,
+        title: t.title,
+        status: t.status,
+        taskType: t.type,
+        rewardAmount: t.rewardTokens,
+        estate: t.estate,
+        blok: t.blok,
+        lat: t.lat,
+        lng: t.lng,
+        txHash: t.txHash,
+        createdAt: t.createdAt,
+        submissionCount: t._count.submissions,
+        prediksiDrone: t.anomalyRaw
+          ? {
+              label: (t.anomalyRaw as Record<string, unknown>).description,
+              confidence: (t.anomalyRaw as Record<string, unknown>).confidence,
+            }
+          : null,
+      })),
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** GET /api/v1/tasks/:id */
+tasksRouter.get('/:id', async (req, res, next) => {
+  try {
+    const task = await prisma.task.findUniqueOrThrow({
+      where: { id: req.params.id },
+      include: {
+        submissions: {
+          include: { user: { select: { name: true, suiAddress: true } } },
+        },
+        _count: { select: { submissions: true } },
+      },
+    })
+    res.json({ ...task, rewardAmount: task.rewardTokens })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** POST /api/v1/tasks — create (and optionally publish) task */
+tasksRouter.post(
+  '/',
+  requireRole('OPERATOR', 'SUPERVISOR'),
+  async (req, res, next) => {
+    try {
+      const body = CreateTaskSchema.parse(req.body)
+      const companyId = req.auth!.companyId!
+      const minLevel = (TASK_MIN_LEVEL as Record<string, number>)[body.taskType] ?? 1
+
+      const task = await prisma.task.create({
+        data: {
+          companyId,
+          title: body.title,
+          type: body.taskType as any,
+          rewardTokens: body.rewardAmount,
+          requiredLevel: minLevel,
+          lat: body.lat,
+          lng: body.lng,
+          blok: body.blok,
+          estate: body.estate,
+          description: body.description ?? '',
+          coordinates: { lat: body.lat, lng: body.lng },
+          status: body.publish ? 'PUBLISHED' : 'DRAFT',
+          createdByUserId: req.auth!.userId,
+        },
+      })
+
+      let suiTaskId: string | undefined
+      let txHash: string | undefined
+
+      if (body.publish) {
+        const company = await prisma.company.findUniqueOrThrow({
+          where: { id: companyId },
+        })
+        if (!company.treasuryCapId || !company.taskRegistryId) {
+          return res.status(400).json({
+            error: 'Company not fully onboarded on-chain',
+            code: 'ONBOARDING_INCOMPLETE',
+          })
+        }
+        const onChain = await suiService.createOnChainTask({
+          dbTaskId: task.id,
+          treasuryCapId: company.treasuryCapId,
+          registryId: company.taskRegistryId,
+          companyId: task.companyId,
+          title: task.title,
+          taskType: TASK_TYPE_TO_INT[body.taskType] ?? 0,
+          lat: body.lat,
+          lng: body.lng,
+          rewardAmount: body.rewardAmount,
+          minValidatorLevel: minLevel,
+        })
+        suiTaskId = onChain.suiTaskId
+        txHash = onChain.txHash
+
+        await prisma.task.update({
+          where: { id: task.id },
+          data: { suiTaskId, txHash },
+        })
+
+        await prisma.auditLog.create({
+          data: {
+            companyId,
+            actorId: req.auth!.userId,
+            action: 'task_published',
+            entityType: 'Task',
+            entityId: task.id,
+            estate: body.estate,
+            txHash,
+            metadata: { suiTaskId },
+          },
+        })
+      }
+
+      res.status(201).json({ ...task, suiTaskId, txHash, rewardAmount: task.rewardTokens })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
+/** PATCH /api/v1/tasks/:id/publish — publish a DRAFT task on-chain */
+tasksRouter.patch(
+  '/:id/publish',
+  requireRole('OPERATOR'),
+  async (req, res, next) => {
+    try {
+      const task = await prisma.task.findUniqueOrThrow({
+        where: { id: req.params.id },
+      })
+      if (task.status !== 'DRAFT') {
+        return res.status(400).json({
+          error: 'Only DRAFT tasks can be published',
+          code: 'INVALID_STATUS',
+        })
+      }
+      const company = await prisma.company.findUniqueOrThrow({
+        where: { id: task.companyId },
+      })
+      if (!company.treasuryCapId || !company.taskRegistryId) {
+        return res.status(400).json({
+          error: 'Company not fully onboarded on-chain',
+          code: 'ONBOARDING_INCOMPLETE',
+        })
+      }
+      const { suiTaskId, txHash } = await suiService.createOnChainTask({
+        dbTaskId: task.id,
+        treasuryCapId: company.treasuryCapId,
+        registryId: company.taskRegistryId,
+        companyId: task.companyId,
+        title: task.title,
+        taskType: TASK_TYPE_TO_INT[task.type] ?? 0,
+        lat: task.lat ?? 0,
+        lng: task.lng ?? 0,
+        rewardAmount: task.rewardTokens,
+        minValidatorLevel: task.requiredLevel,
+      })
+      const updated = await prisma.task.update({
+        where: { id: task.id },
+        data: { status: 'PUBLISHED', suiTaskId, txHash },
+      })
+      res.json({ ...updated, rewardAmount: updated.rewardTokens })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
+/** PATCH /api/v1/tasks/:id/claim — validator claims a task */
+tasksRouter.patch('/:id/claim', async (req, res, next) => {
+  try {
+    const task = await prisma.task.findUniqueOrThrow({
+      where: { id: req.params.id },
+    })
+    if (task.status !== 'PUBLISHED') {
+      return res.status(400).json({
+        error: 'Task is not available for claiming',
+        code: 'INVALID_STATUS',
+      })
+    }
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { status: 'IN_PROGRESS', currentClaims: { increment: 1 } },
+    })
+    res.json({ success: true, taskId: task.id })
+  } catch (err) {
+    next(err)
+  }
+})
+import { Router, type Router as ExpressRouter } from 'express'
+import { prisma } from '../lib/prisma'
+import { requireAuth } from '../middleware/auth'
+
+export const treasuryRouter: ExpressRouter = Router()
+treasuryRouter.use(requireAuth)
+
+/** GET /api/v1/treasury — token treasury stats for the company */
+treasuryRouter.get('/', async (req, res, next) => {
+  try {
+    const company = await prisma.company.findUniqueOrThrow({
+      where: { id: req.auth!.companyId! },
+    })
+
+    const [distributed, pending, recentSubs] = await Promise.all([
+      prisma.submission.aggregate({
+        where: { task: { companyId: company.id }, status: 'VERIFIED' },
+        _sum: { tokenAwarded: true },
+      }),
+      prisma.submission.aggregate({
+        where: {
+          task: { companyId: company.id },
+          status: { in: ['PENDING', 'LLM_CHECKING', 'FLAGGED'] },
+        },
+        _sum: { tokenAwarded: true },
+      }),
+      prisma.submission.findMany({
+        where: { task: { companyId: company.id }, status: { in: ['VERIFIED', 'REWARDED'] } },
+        orderBy: { verifiedAt: 'desc' },
+        take: 10,
+        include: {
+          user: { select: { id: true, name: true } },
+          task: { select: { id: true } },
+        },
+      }),
+    ])
+
+    res.json({
+      token: {
+        symbol: company.tokenSymbol,
+        contractAddress: company.contractAddress,
+        decimals: 0,
+      },
+      summary: {
+        distributed: distributed._sum.tokenAwarded ?? 0,
+        lockedInEscrow: pending._sum.tokenAwarded ?? 0,
+      },
+      recentTransactions: recentSubs.map(s => ({
+        id: s.id,
+        type: 'distributed',
+        amount: s.tokenAwarded,
+        recipient: { id: s.user.id, name: s.user.name },
+        taskId: s.task.id,
+        txHash: s.onChainSubmitId,
+        status: 'confirmed',
+        timestamp: s.verifiedAt,
+      })),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+import { Router, type Router as ExpressRouter } from 'express'
+import { z } from 'zod'
+import { prisma } from '../lib/prisma'
+import * as suiService from '../services/sui.service'
+import { requireAuth, requireRole } from '../middleware/auth'
+
+export const validatorsRouter: ExpressRouter = Router()
+validatorsRouter.use(requireAuth)
+
+const CreateValidatorSchema = z.object({
+  name: z.string().min(2),
+  phone: z.string().optional(),
+  suiAddress: z.string().optional(),
+  level: z.number().int().min(1).max(3).default(1),
+})
+
+validatorsRouter.get('/', async (req, res, next) => {
+  try {
+    const validators = await prisma.validator.findMany({
+      where: { companyId: req.auth!.companyId! },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json(validators)
+  } catch (err) {
+    next(err)
+  }
+})
+
+validatorsRouter.post('/', requireRole('OPERATOR'), async (req, res, next) => {
+  try {
+    const body = CreateValidatorSchema.parse(req.body)
+    const validator = await prisma.validator.create({
+      data: { ...body, companyId: req.auth!.companyId! },
+    })
+    if (validator.suiAddress) {
+      try {
+        await suiService.createReputation({
+          companyId: req.auth!.companyId!,
+          validatorAddress: validator.suiAddress,
+        })
+      } catch (err) {
+        console.warn('[validators] createReputation failed:', err)
+      }
+    }
+    res.status(201).json(validator)
+  } catch (err) {
+    next(err)
+  }
+})
+
+validatorsRouter.patch('/:id', requireRole('OPERATOR'), async (req, res, next) => {
+  try {
+    const { level, isActive } = z
+      .object({ level: z.number().int().min(1).max(3).optional(), isActive: z.boolean().optional() })
+      .parse(req.body)
+    const updated = await prisma.validator.update({
+      where: { id: req.params.id },
+      data: { level, isActive },
+    })
+    res.json(updated)
+  } catch (err) {
+    next(err)
+  }
+})
+import { Router, type Router as ExpressRouter } from 'express'
+import { z } from 'zod'
+import { prisma } from '../lib/prisma'
+import * as suiService from '../services/sui.service'
+import { requireAuth, requireRole } from '../middleware/auth'
+
+export const verifierRouter: ExpressRouter = Router()
+verifierRouter.use(requireAuth, requireRole('AGRONOMIS', 'SUPERVISOR', 'OPERATOR'))
+
+/** GET /api/v1/verifier/queue — flagged submissions awaiting agronomist verdict */
+verifierRouter.get('/queue', async (req, res, next) => {
+  try {
+    const flagged = await prisma.submission.findMany({
+      where: {
+        status: 'FLAGGED',
+        task: { companyId: req.auth!.companyId! },
+        verdict: null,
+      },
+      include: {
+        task: { select: { id: true, title: true, type: true, suiTaskId: true, rewardTokens: true } },
+        user: { select: { id: true, name: true, suiAddress: true } },
+      },
+      orderBy: { submittedAt: 'asc' },
+    })
+    res.json(flagged)
+  } catch (err) {
+    next(err)
+  }
+})
+
+const VerdictSchema = z.object({
+  submissionId: z.string(),
+  verdict: z.enum(['CONFIRMED', 'REJECTED', 'INCONCLUSIVE']),
+  diagnosisCode: z.string().optional(),
+  notes: z.string(),
+  isTrainingData: z.boolean().default(true),
+})
+
+/** POST /api/v1/verifier/verdict — agronomist submits final verdict */
+verifierRouter.post('/verdict', async (req, res, next) => {
+  try {
+    const body = VerdictSchema.parse(req.body)
+
+    const submission = await prisma.submission.findUniqueOrThrow({
+      where: { id: body.submissionId },
+      include: {
+        task: true,
+        user: true,
+      },
+    })
+
+    const verdictRecord = await prisma.verdict.create({
+      data: {
+        submissionId: body.submissionId,
+        agronomistId: req.auth!.userId,
+        verdict: body.verdict,
+        diagnosisCode: body.diagnosisCode,
+        notes: body.notes,
+        isTrainingData: body.isTrainingData,
+      },
+    })
+
+    let rewardTxHash: string | undefined
+
+    if (body.verdict === 'CONFIRMED' && submission.task.suiTaskId) {
+      try {
+        const result = await suiService.releaseReward({
+          suiTaskId: submission.task.suiTaskId,
+          validatorAddress: submission.user.suiAddress ?? '0x0',
+        })
+        rewardTxHash = result.txHash
+        await prisma.submission.update({
+          where: { id: body.submissionId },
+          data: {
+            status: 'REWARDED',
+            tokenAwarded: submission.task.rewardTokens,
+            onChainSubmitId: rewardTxHash,
+          },
+        })
+        await prisma.task.update({
+          where: { id: submission.taskId },
+          data: { status: 'COMPLETED' },
+        })
+      } catch (err) {
+        console.error('[verifier] releaseReward failed:', err)
+      }
+    } else if (body.verdict === 'REJECTED') {
+      await prisma.submission.update({
+        where: { id: body.submissionId },
+        data: { status: 'REJECTED' },
+      })
+      await prisma.task.update({
+        where: { id: submission.taskId },
+        data: { status: 'PUBLISHED' },
+      })
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        companyId: submission.task.companyId,
+        actorId: req.auth!.userId,
+        action: 'verdict',
+        entityType: 'Submission',
+        entityId: body.submissionId,
+        txHash: rewardTxHash,
+        metadata: { verdict: body.verdict, notes: body.notes },
+      },
+    })
+
+    res.json({ success: true, verdictId: verdictRecord.id, rewardTxHash })
+  } catch (err) {
+    next(err)
+  }
+})
+import Anthropic from '@anthropic-ai/sdk'
+import type { QualityGateResult, DroneAnomaly } from '@greenproof/shared'
+
+const MOCK_LLM = process.env.MOCK_LLM === 'true'
+
+let _anthropicClient: Anthropic | undefined
+
+function getAnthropicClient(): Anthropic {
+  if (!_anthropicClient) {
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set — set MOCK_LLM=true for local dev')
+    _anthropicClient = new Anthropic({ apiKey })
+  }
+  return _anthropicClient
+}
+
+// ─── Quality Gate ───────────────────────────────────────────────────────────
+
+/**
+ * Runs an LLM quality gate on a validator submission.
+ * Returns a QualityGateResult indicating whether to APPROVE, FLAG_FOR_REVIEW, or REJECT.
+ * Uses claude-3-5-sonnet with vision for photo analysis.
+ */
+export async function runQualityGate(params: {
+  diagnosis: string
+  taskTitle: string
+  taskType: string
+  gpsDistanceM: number
+  photoBase64s: string[]  // base64-encoded photo buffers
+}): Promise<QualityGateResult> {
+  if (MOCK_LLM) return mockQcPass()
+
+  const imageBlocks = params.photoBase64s.slice(0, 3).map(b64 => ({
+    type: 'image' as const,
+    source: {
+      type: 'base64' as const,
+      media_type: 'image/jpeg' as const,
+      data: b64,
+    },
+  }))
+
+  const systemPrompt = `You are an expert palm oil agronomist quality control system.
+Evaluate field validator submissions for accuracy and relevance.
+Respond ONLY with a valid JSON object matching this exact schema (no markdown, no code fences):
+{
+  "qualityScore": <number 0-100>,
+  "isConsistent": <boolean>,
+  "hasRelevantContent": <boolean>,
+  "flags": [<"GPS_TOO_FAR"|"PHOTO_IRRELEVANT"|"DIAGNOSIS_INCONSISTENT"|"INCOMPLETE_COVERAGE">],
+  "reasoning": "<string>",
+  "recommendedAction": <"APPROVE"|"FLAG_FOR_REVIEW"|"REJECT">
+}`
+
+  const userContent: Anthropic.MessageParam['content'] = [
+    ...imageBlocks,
+    {
+      type: 'text',
+      text: `Task: ${params.taskTitle} (type: ${params.taskType})
+GPS distance from task center: ${params.gpsDistanceM}m (flag GPS_TOO_FAR if > 100m)
+Validator diagnosis: ${params.diagnosis}
+
+Evaluate whether the photos support the diagnosis and are taken at the correct location.`,
+    },
+  ]
+
+  const response = await getAnthropicClient().messages.create({
+    model: 'claude-3-5-sonnet-20240620',
+    max_tokens: 512,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userContent }],
+  })
+
+  const text = response.content.find(b => b.type === 'text')?.text ?? '{}'
+  return parseQcResponse(text)
+}
+
+function parseQcResponse(raw: string): QualityGateResult {
+  try {
+    // Strip markdown code fences if LLM adds them despite instructions
+    const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
+    const json = JSON.parse(cleaned)
+    const validActions = ['APPROVE', 'FLAG_FOR_REVIEW', 'REJECT']
+    return {
+      qualityScore: typeof json.qualityScore === 'number' ? json.qualityScore : 50,
+      isConsistent: Boolean(json.isConsistent),
+      hasRelevantContent: Boolean(json.hasRelevantContent ?? true),
+      flags: Array.isArray(json.flags) ? json.flags : [],
+      reasoning: typeof json.reasoning === 'string' ? json.reasoning : 'No reasoning provided',
+      recommendedAction: validActions.includes(json.recommendedAction)
+        ? json.recommendedAction
+        : 'FLAG_FOR_REVIEW',
+    }
+  } catch {
+    return {
+      qualityScore: 30,
+      isConsistent: false,
+      hasRelevantContent: false,
+      flags: ['DIAGNOSIS_INCONSISTENT'],
+      reasoning: 'Failed to parse quality gate response',
+      recommendedAction: 'FLAG_FOR_REVIEW',
+    }
+  }
+}
+
+function mockQcPass(): QualityGateResult {
+  return {
+    qualityScore: 85,
+    isConsistent: true,
+    hasRelevantContent: true,
+    flags: [],
+    reasoning: '[MOCK] Auto-approved for local development',
+    recommendedAction: 'APPROVE',
+  }
+}
+
+// ─── Anomaly Simulator ──────────────────────────────────────────────────────
+
+/**
+ * Generates realistic drone anomaly detections for a palm oil estate using Claude.
+ * Returns an array of DroneAnomaly objects matching the shared type.
+ */
+export async function simulateAnomalies(params: {
+  estate: string
+  blockIds: string[]
+  count: number
+  includeKritikal: boolean
+}): Promise<DroneAnomaly[]> {
+  if (MOCK_LLM) return mockAnomalies(params.count)
+
+  const prompt = `Generate ${params.count} realistic palm oil drone anomaly detections for estate "${params.estate}".
+Blocks: ${params.blockIds.join(', ')}.
+${params.includeKritikal ? 'Include 1-2 critical anomalies (Ganoderma).' : 'No critical anomalies — medium severity max.'}
+Output ONLY a valid JSON array. No markdown, no code fences, no extra text.
+Each item must have exactly these fields:
+{
+  "anomalyType": "<GANODERMA_SUSPECT|NUTRIENT_DEFICIENCY|PEST_ATTACK|WATER_STRESS|ABNORMAL_GROWTH|OTHER>",
+  "severity": "<low|medium|high|critical>",
+  "lat": <number, Kalimantan: -1 to -4>,
+  "lng": <number, Kalimantan: 113 to 117>,
+  "description": "<realistic Indonesian palm oil disease description>",
+  "suggestedTaskType": "<TREE_COUNT|AREA_CONDITION|HEALTH_DIAGNOSIS|ANOMALY_SEMI|ANOMALY_CRITICAL>",
+  "confidence": <number 0-100>
+}
+Use realistic disease names: Ganoderma boninense, BSR, Crown Disease, Defisiensi Magnesium, Oryctes rhinoceros, waterlogging, Nettle caterpillar.`
+
+  const response = await getAnthropicClient().messages.create({
+    model: 'claude-3-haiku-20240307',
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  const text = response.content.find(b => b.type === 'text')?.text ?? '[]'
+  try {
+    const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
+    const parsed = JSON.parse(cleaned)
+    if (!Array.isArray(parsed)) throw new Error('Expected array')
+    return parsed as DroneAnomaly[]
+  } catch (err) {
+    throw new Error(
+      `Failed to parse LLM anomaly output: ${err instanceof Error ? err.message : String(err)}. Raw: ${text.slice(0, 200)}`
+    )
+  }
+}
+
+function mockAnomalies(count: number): DroneAnomaly[] {
+  const types = ['GANODERMA_SUSPECT', 'NUTRIENT_DEFICIENCY', 'PEST_ATTACK'] as const
+  const tasks = ['HEALTH_DIAGNOSIS', 'ANOMALY_SEMI', 'HEALTH_DIAGNOSIS'] as const
+  return Array.from({ length: count }, (_, i) => ({
+    anomalyType: types[i % 3],
+    severity: 'medium' as const,
+    lat: Number((-2.5 + i * 0.01).toFixed(6)),
+    lng: Number((114.5 + i * 0.01).toFixed(6)),
+    description: `[MOCK] Defisiensi Magnesium — gejala klorosis pada daun tua (blok ${i + 1})`,
+    suggestedTaskType: tasks[i % 3],
+    confidence: 70 + (i % 20),
+  }))
+}
+import {
+  createSealPolicy,
+  grantSealAccess,
+  revokeSealAccess,
+  encryptForPolicy,
+} from '@greenproof/sui-client'
+import { prisma } from '../lib/prisma'
+
+const AI_SERVICE_ADDRESS = process.env.GREENPROOF_SERVICE_ADDRESS ?? ''
+const GREENPROOF_CONTRACT = process.env.GREENPROOF_PACKAGE_ID ?? ''
+
+/**
+ * Provisions a Seal policy for a new company at onboarding.
+ * Allows: company wallet + GreenProof contract + optionally the AI service.
+ */
+export async function provisionCompanyPolicy(params: {
+  companyId: string
+  companyWalletAddress: string
+  includeAiService: boolean
+}): Promise<{ policyId: string }> {
+  const owners = [params.companyWalletAddress, GREENPROOF_CONTRACT]
+  if (params.includeAiService && AI_SERVICE_ADDRESS) owners.push(AI_SERVICE_ADDRESS)
+
+  const { policyId } = await createSealPolicy(owners)
+
+  await prisma.sealAccessLog.create({
+    data: {
+      companyId: params.companyId,
+      policyId,
+      grantedTo: owners.join(','),
+      action: 'GRANT',
+      service: 'Company onboarding',
+    },
+  })
+  return { policyId }
+}
+
+/**
+ * Toggles AI service access on a company's Seal policy.
+ * Called when operator switches between AI mode A (own model) and B (GreenProof AI).
+ */
+export async function toggleAiAccess(params: {
+  companyId: string
+  policyId: string
+  enable: boolean
+}): Promise<void> {
+  if (!AI_SERVICE_ADDRESS) {
+    console.warn('[seal.service] AI_SERVICE_ADDRESS not configured — skipping Seal access toggle')
+    return
+  }
+  if (params.enable) {
+    await grantSealAccess(params.policyId, AI_SERVICE_ADDRESS)
+  } else {
+    await revokeSealAccess(params.policyId, AI_SERVICE_ADDRESS)
+  }
+  await prisma.sealAccessLog.create({
+    data: {
+      companyId: params.companyId,
+      policyId: params.policyId,
+      grantedTo: AI_SERVICE_ADDRESS,
+      action: params.enable ? 'GRANT' : 'REVOKE',
+      service: 'AI Mode toggle',
+    },
+  })
+}
+
+/** Encrypt photo data for a company's Seal policy before uploading to Walrus. */
+export async function encryptPhoto(data: Buffer, policyId: string): Promise<Buffer> {
+  return encryptForPolicy(data, policyId)
+}
+import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client'
+import { TransactionBlock } from '@mysten/sui.js/transactions'
+import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519'
+
+const NETWORK = (process.env.SUI_NETWORK as 'testnet' | 'mainnet' | 'devnet') ?? 'testnet'
+const PACKAGE_ID = process.env.GREENPROOF_PACKAGE_ID ?? ''
+const ADMIN_CAP_ID = process.env.GREENPROOF_ADMIN_CAP_ID ?? ''
+
+/** Call once at API startup to fail fast if SUI env vars are missing. */
+export function validateSuiEnv(): void {
+  const required: Record<string, string | undefined> = {
+    GREENPROOF_PACKAGE_ID: process.env.GREENPROOF_PACKAGE_ID,
+    GREENPROOF_ADMIN_CAP_ID: process.env.GREENPROOF_ADMIN_CAP_ID,
+    GREENPROOF_DEPLOYER_PRIVATE_KEY: process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY,
+  }
+  const missing = Object.entries(required)
+    .filter(([, v]) => !v)
+    .map(([k]) => k)
+  if (missing.length > 0) {
+    throw new Error(`SUI env vars not configured: ${missing.join(', ')}`)
+  }
+}
+
+let _client: SuiClient | undefined
+let _keypair: Ed25519Keypair | undefined
+
+function getClient(): SuiClient {
+  if (!_client) {
+    _client = new SuiClient({ url: process.env.SUI_RPC_URL ?? getFullnodeUrl(NETWORK) })
+  }
+  return _client
+}
+
+function getDeployerKeypair(): Ed25519Keypair {
+  if (!_keypair) {
+    const key = process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY
+    if (!key) throw new Error('GREENPROOF_DEPLOYER_PRIVATE_KEY not set')
+    _keypair = Ed25519Keypair.fromSecretKey(Buffer.from(key, 'hex'))
+  }
+  return _keypair
+}
+
+function deployerAddress(): string {
+  return getDeployerKeypair().getPublicKey().toSuiAddress()
+}
+
+async function executeAdmin(tx: TransactionBlock) {
+  const client = getClient()
+  const keypair = getDeployerKeypair()
+  const result = await client.signAndExecuteTransactionBlock({
+    signer: keypair,
+    transactionBlock: tx,
+    options: { showEffects: true, showObjectChanges: true },
+  })
+  if (result.effects?.status.status !== 'success') {
+    throw new Error(`SUI tx failed: ${result.effects?.status.error ?? 'unknown error'}`)
+  }
+  return result
+}
+
+/**
+ * Creates a CompanyTreasuryCap for a new company at onboarding.
+ * Requires GreenproofAdminCap which is held by deployer.
+ */
+export async function createCompanyToken(params: {
+  companyId: string
+  name: string
+  symbol: string
+}): Promise<{ treasuryCapId: string; txHash: string }> {
+  const tx = new TransactionBlock()
+  const [cap] = tx.moveCall({
+    target: `${PACKAGE_ID}::validator_token::create_company_token`,
+    arguments: [
+      tx.object(ADMIN_CAP_ID),
+      tx.pure(params.companyId),
+      tx.pure(params.name),
+      tx.pure(params.symbol),
+    ],
+  })
+  tx.transferObjects([cap], tx.pure(deployerAddress()))
+
+  const result = await executeAdmin(tx)
+  const created = (result.objectChanges ?? []).find(
+    c => c.type === 'created' && c.objectType?.includes('CompanyTreasuryCap')
+  )
+  if (!created || created.type !== 'created') {
+    throw new Error('CompanyTreasuryCap not found in tx result')
+  }
+  return { treasuryCapId: created.objectId, txHash: result.digest }
+}
+
+/**
+ * Creates a TaskRegistry object for a company at onboarding.
+ */
+export async function createTaskRegistry(
+  companyId: string
+): Promise<{ registryId: string; txHash: string }> {
+  const tx = new TransactionBlock()
+  const [registry] = tx.moveCall({
+    target: `${PACKAGE_ID}::task_registry::create_registry`,
+    arguments: [tx.pure(companyId)],
+  })
+  tx.transferObjects([registry], tx.pure(deployerAddress()))
+
+  const result = await executeAdmin(tx)
+  const created = (result.objectChanges ?? []).find(
+    c => c.type === 'created' && c.objectType?.includes('TaskRegistry')
+  )
+  if (!created || created.type !== 'created') {
+    throw new Error('TaskRegistry not found in tx result')
+  }
+  return { registryId: created.objectId, txHash: result.digest }
+}
+
+/**
+ * Mints escrow tokens and creates a Task on-chain in a single PTB.
+ * Coordinates are encoded as UTF-8 bytes of a JSON string { lat, lng }.
+ */
+export async function createOnChainTask(params: {
+  dbTaskId: string
+  treasuryCapId: string
+  registryId: string
+  companyId: string
+  title: string
+  taskType: number    // 0=area_condition, 1=tree_count, 2=health_diagnosis, 3=anomaly_semi, 4=anomaly_critical
+  lat: number
+  lng: number
+  rewardAmount: number
+  minValidatorLevel: number
+}): Promise<{ suiTaskId: string; txHash: string }> {
+  const coords = Array.from(Buffer.from(JSON.stringify({ lat: params.lat, lng: params.lng })))
+
+  const tx = new TransactionBlock()
+  // Step 1: Mint the escrow token
+  const [coin] = tx.moveCall({
+    target: `${PACKAGE_ID}::validator_token::mint`,
+    arguments: [
+      tx.object(params.treasuryCapId),
+      tx.pure(params.rewardAmount),
+      tx.pure(params.dbTaskId),  // task_id label for event emission
+    ],
+  })
+  // Step 2: Create task with minted coin as escrow
+  tx.moveCall({
+    target: `${PACKAGE_ID}::task_registry::create_task`,
+    arguments: [
+      tx.object(params.registryId),
+      tx.pure(params.companyId),
+      tx.pure(params.title),
+      tx.pure(params.taskType),
+      tx.pure(coords),
+      tx.pure(params.rewardAmount),
+      tx.pure(params.minValidatorLevel),
+      coin,
+    ],
+  })
+
+  const result = await executeAdmin(tx)
+  const created = (result.objectChanges ?? []).find(
+    c => c.type === 'created' && c.objectType?.includes('task_registry::Task')
+  )
+  if (!created || created.type !== 'created') {
+    throw new Error('Task object not found in tx result')
+  }
+  return { suiTaskId: created.objectId, txHash: result.digest }
+}
+
+/**
+ * Validator claims a task. Backend-sponsored: deployer pays gas, validator is logical sender.
+ * For MVP: uses deployer key as proxy signer since zkLogin session keys aren't stored server-side.
+ */
+export async function claimTask(params: {
+  suiTaskId: string
+  validatorAddress: string
+  validatorPrivKeyHex: string  // ephemeral key from zkLogin session; MVP: use deployer key
+}): Promise<{ txHash: string }> {
+  if (params.validatorPrivKeyHex === process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY) {
+    console.warn('[sui.service] WARNING: using deployer key as validator proxy — replace with session key in production')
+  }
+
+  const client = getClient()
+  const deployerKeypair = getDeployerKeypair()
+  const validatorKeypair = Ed25519Keypair.fromSecretKey(Buffer.from(params.validatorPrivKeyHex, 'hex'))
+
+  const tx = new TransactionBlock()
+  tx.moveCall({
+    target: `${PACKAGE_ID}::task_registry::claim_task`,
+    arguments: [tx.object(params.suiTaskId)],
+  })
+  tx.setSender(params.validatorAddress)
+  tx.setGasOwner(deployerAddress())
+
+  const bytes = await tx.build({ client })
+  const validatorSig = (await validatorKeypair.signTransactionBlock(bytes)).signature
+  const sponsorSig = (await deployerKeypair.signTransactionBlock(bytes)).signature
+
+  const result = await client.executeTransactionBlock({
+    transactionBlock: bytes,
+    signature: [validatorSig, sponsorSig],
+    options: { showEffects: true },
+  })
+  if (result.effects?.status.status !== 'success') {
+    throw new Error(`claimTask tx failed: ${result.effects?.status.error ?? 'unknown'}`)
+  }
+  return { txHash: result.digest }
+}
+
+/**
+ * Submits validation evidence on-chain (blob_id + diagnosis).
+ * Backend-sponsored transaction: deployer pays gas.
+ */
+export async function submitValidationOnChain(params: {
+  suiTaskId: string
+  blobId: string
+  diagnosis: string
+  validatorAddress: string
+  validatorPrivKeyHex: string
+}): Promise<{ txHash: string }> {
+  if (params.validatorPrivKeyHex === process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY) {
+    console.warn('[sui.service] WARNING: using deployer key as validator proxy — replace with session key in production')
+  }
+
+  const client = getClient()
+  const deployerKeypair = getDeployerKeypair()
+  const validatorKeypair = Ed25519Keypair.fromSecretKey(Buffer.from(params.validatorPrivKeyHex, 'hex'))
+
+  const tx = new TransactionBlock()
+  tx.moveCall({
+    target: `${PACKAGE_ID}::task_registry::submit_validation`,
+    arguments: [
+      tx.object(params.suiTaskId),
+      tx.pure(params.blobId),
+      tx.pure(params.diagnosis),
+    ],
+  })
+  tx.setSender(params.validatorAddress)
+  tx.setGasOwner(deployerAddress())
+
+  const bytes = await tx.build({ client })
+  const validatorSig = (await validatorKeypair.signTransactionBlock(bytes)).signature
+  const sponsorSig = (await deployerKeypair.signTransactionBlock(bytes)).signature
+
+  const result = await client.executeTransactionBlock({
+    transactionBlock: bytes,
+    signature: [validatorSig, sponsorSig],
+    options: { showEffects: true },
+  })
+  if (result.effects?.status.status !== 'success') {
+    throw new Error(`submitValidation tx failed: ${result.effects?.status.error ?? 'unknown'}`)
+  }
+  return { txHash: result.digest }
+}
+
+/**
+ * Releases escrow reward to validator after QC pass or agronomist verdict.
+ * Deployer-only: extracts coin from task escrow and transfers to validator.
+ */
+export async function releaseReward(params: {
+  suiTaskId: string
+  validatorAddress: string
+}): Promise<{ txHash: string }> {
+  const tx = new TransactionBlock()
+  const [coin] = tx.moveCall({
+    target: `${PACKAGE_ID}::task_registry::release_reward`,
+    arguments: [
+      tx.object(params.suiTaskId),
+      tx.pure(params.validatorAddress),
+    ],
+  })
+  // Transfer the returned CompanyToken to the validator's wallet
+  tx.transferObjects([coin], tx.pure(params.validatorAddress))
+
+  const result = await executeAdmin(tx)
+  return { txHash: result.digest }
+}
+
+/**
+ * Flags a task on-chain. Called after LLM quality gate returns FLAG_FOR_REVIEW.
+ */
+export async function flagTaskOnChain(
+  suiTaskId: string,
+  reason: string
+): Promise<{ txHash: string }> {
+  const tx = new TransactionBlock()
+  tx.moveCall({
+    target: `${PACKAGE_ID}::task_registry::flag_task`,
+    arguments: [tx.object(suiTaskId), tx.pure(reason)],
+  })
+  const result = await executeAdmin(tx)
+  return { txHash: result.digest }
+}
+
+/**
+ * Creates a ValidatorReputation shared object for a newly registered validator.
+ */
+export async function createReputation(params: {
+  companyId: string
+  validatorAddress: string
+}): Promise<{ reputationId: string; txHash: string }> {
+  const tx = new TransactionBlock()
+  tx.moveCall({
+    target: `${PACKAGE_ID}::reward_engine::create_reputation`,
+    arguments: [tx.pure(params.companyId), tx.pure(params.validatorAddress)],
+  })
+  const result = await executeAdmin(tx)
+  const created = (result.objectChanges ?? []).find(
+    c => c.type === 'created' && c.objectType?.includes('ValidatorReputation')
+  )
+  // reputationId may be undefined if chain didn't return it — treat as optional
+  const reputationId = (created?.type === 'created' ? created.objectId : undefined) ?? ''
+  return { reputationId, txHash: result.digest }
+}
+import { REWARD_MULTIPLIERS } from '@greenproof/shared'
+
+/**
+ * Calculate the actual reward for a validator at a given level.
+ * Level 1: 1.0x, Level 2: 1.5x, Level 3: 2.0x
+ */
+export function calculateReward(
+  baseAmount: number,
+  validatorLevel: 1 | 2 | 3
+): number {
+  const multiplier = REWARD_MULTIPLIERS[validatorLevel] ?? 1.0
+  return Math.floor(baseAmount * multiplier)
+}
+import { uploadToWalrus, retrieveFromWalrus, verifyBlobExists } from '@greenproof/sui-client'
+export type { WalrusUploadResult } from '@greenproof/sui-client'
+
+/** Upload a photo buffer to Walrus decentralized storage. */
+export async function uploadPhoto(
+  buffer: Buffer,
+  mimeType: string
+): Promise<{ blobId: string; suiObjectId: string; size: number }> {
+  return uploadToWalrus(buffer, mimeType)
+}
+
+/** Retrieve a blob from Walrus by its blob ID. */
+export async function fetchPhoto(blobId: string): Promise<Buffer> {
+  return retrieveFromWalrus(blobId)
+}
+
+/** Check if a blob exists in Walrus without downloading it. */
+export async function blobExists(blobId: string): Promise<boolean> {
+  return verifyBlobExists(blobId)
+}
+/**
+ * @greenproof/sui-client
+ *
+ * Wrapper around @mysten/sui.js for GreenProof-specific blockchain operations.
+ * Handles sponsored transactions and zkLogin flows.
+ *
+ * See TechSpec Section 4 (Smart Contract Interface) and Section 9 (zkLogin + Sponsored Tx).
+ */
+
+// Re-export SUI primitives needed across apps
+export { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client'
+export { TransactionBlock } from '@mysten/sui.js/transactions'
+export { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519'
+
+// Re-export Walrus HTTP client
+export * from './walrus'
+
+// Re-export Seal access control and encryption
+export * from './seal'
+
+// TODO: Implement after Move contracts are deployed
+// export { publishTask }     from './task-registry'
+// export { claimTask }       from './task-registry'
+// export { confirmSubmission } from './task-registry'
+// export { mintReward }      from './validator-token'
+// export { sponsoredClaim }  from './sponsored-tx'
+// export { deriveZkLoginAddress } from './zklogin'
+/**
+ * Seal HTTP abstraction layer for GreenProof.
+ *
+ * Provides access control and encryption/decryption for data stored in Walrus.
+ * If SEAL_SERVICE_URL is not set, falls back to mock mode (logs warnings, never crashes).
+ *
+ * See TechSpec Section 7 (Access Control with Seal).
+ */
+
+const SEAL_URL = process.env.SEAL_SERVICE_URL
+const MOCK = !SEAL_URL || process.env.MOCK_SEAL === 'true'
+
+export interface SealPolicy {
+  policyId: string
+  ownerAddresses: string[]
+}
+
+/**
+ * Create a new Seal policy allowing the given addresses to decrypt blobs.
+ *
+ * In mock mode: returns a synthetic policy ID and logs a warning.
+ * In real mode: POST to Seal service with owner addresses.
+ */
+export async function createSealPolicy(ownerAddresses: string[]): Promise<{ policyId: string }> {
+  if (MOCK) {
+    const mockId = `seal-mock-${Date.now()}`
+    console.warn(
+      `[SEAL MOCK] createSealPolicy called with owners: ${ownerAddresses.join(', ')} → ${mockId}`
+    )
+    return { policyId: mockId }
+  }
+
+  const response = await fetch(`${SEAL_URL}/v1/policies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ owners: ownerAddresses }),
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Seal createPolicy failed with status ${response.status}: ${response.statusText}`
+    )
+  }
+
+  const json = (await response.json()) as { policyId: string }
+  return { policyId: json.policyId }
+}
+
+/**
+ * Grant an address access to decrypt a Seal policy.
+ *
+ * In mock mode: logs a warning and returns.
+ * In real mode: POST to Seal service to add a grant.
+ */
+export async function grantSealAccess(policyId: string, address: string): Promise<void> {
+  if (MOCK) {
+    console.warn(`[SEAL MOCK] grantSealAccess: policy ${policyId} → ${address}`)
+    return
+  }
+
+  const response = await fetch(`${SEAL_URL}/v1/policies/${policyId}/grants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address }),
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Seal grantAccess failed with status ${response.status}: ${response.statusText}`
+    )
+  }
+}
+
+/**
+ * Revoke an address's access to a Seal policy.
+ *
+ * In mock mode: logs a warning and returns.
+ * In real mode: DELETE the grant from Seal service.
+ */
+export async function revokeSealAccess(policyId: string, address: string): Promise<void> {
+  if (MOCK) {
+    console.warn(`[SEAL MOCK] revokeSealAccess: policy ${policyId} ← ${address}`)
+    return
+  }
+
+  const response = await fetch(`${SEAL_URL}/v1/policies/${policyId}/grants/${address}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Seal revokeAccess failed with status ${response.status}: ${response.statusText}`
+    )
+  }
+}
+
+/**
+ * Get the access log (all grants) for a Seal policy.
+ *
+ * In mock mode: returns an empty array.
+ * In real mode: GET the grants from Seal service.
+ */
+export async function getSealAccessLog(
+  policyId: string
+): Promise<Array<{ address: string; grantedAt: string }>> {
+  if (MOCK) {
+    return []
+  }
+
+  const response = await fetch(`${SEAL_URL}/v1/policies/${policyId}/grants`, {
+    method: 'GET',
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Seal getAccessLog failed with status ${response.status}: ${response.statusText}`
+    )
+  }
+
+  const json = (await response.json()) as Array<{ address: string; grantedAt: string }>
+  return json
+}
+
+/**
+ * Encrypt data for a Seal policy before uploading to Walrus.
+ *
+ * In mock mode: returns the data unchanged (plaintext in dev).
+ * In real mode: POST to Seal service to encrypt with the policy.
+ */
+export async function encryptForPolicy(data: Buffer, policyId: string): Promise<Buffer> {
+  if (MOCK) {
+    return data
+  }
+
+  const response = await fetch(`${SEAL_URL}/v1/encrypt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      policyId,
+      data: data.toString('base64'),
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Seal encrypt failed with status ${response.status}: ${response.statusText}`)
+  }
+
+  const json = (await response.json()) as { encrypted: string }
+  return Buffer.from(json.encrypted, 'base64')
+}
+
+/**
+ * Decrypt data from Walrus using Seal.
+ *
+ * In mock mode: returns the data unchanged.
+ * In real mode: POST to Seal service to decrypt with the policy.
+ */
+export async function decryptFromPolicy(data: Buffer, policyId: string): Promise<Buffer> {
+  if (MOCK) {
+    return data
+  }
+
+  const response = await fetch(`${SEAL_URL}/v1/decrypt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      policyId,
+      data: data.toString('base64'),
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Seal decrypt failed with status ${response.status}: ${response.statusText}`)
+  }
+
+  const json = (await response.json()) as { decrypted: string }
+  return Buffer.from(json.decrypted, 'base64')
+}
+import * as fs from 'fs'
+import * as path from 'path'
+
+const PUBLISHER = process.env.WALRUS_PUBLISHER_URL ?? 'https://publisher.walrus-testnet.walrus.space'
+const AGGREGATOR = process.env.WALRUS_AGGREGATOR_URL ?? 'https://aggregator.walrus-testnet.walrus.space'
+const EPOCHS = process.env.WALRUS_EPOCHS ?? '5'
+const MOCK = process.env.MOCK_WALRUS === 'true'
+const MOCK_DIR = '/tmp/greenproof-walrus'
+
+export interface WalrusUploadResult {
+  blobId: string
+  suiObjectId: string
+  size: number
+}
+
+/**
+ * Sleep for a given number of milliseconds.
+ * Used for retry backoff logic.
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Generate a mock blob ID with timestamp and random suffix.
+ */
+function generateMockBlobId(): string {
+  return `mock-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+/**
+ * Mock upload: write data to filesystem.
+ */
+function mockUpload(data: Buffer): WalrusUploadResult {
+  // Ensure mock directory exists
+  if (!fs.existsSync(MOCK_DIR)) {
+    fs.mkdirSync(MOCK_DIR, { recursive: true })
+  }
+
+  const blobId = generateMockBlobId()
+  const filePath = path.join(MOCK_DIR, blobId)
+  fs.writeFileSync(filePath, data)
+
+  return {
+    blobId,
+    suiObjectId: blobId,
+    size: data.length,
+  }
+}
+
+/**
+ * Mock retrieve: read data from filesystem.
+ */
+function mockRetrieve(blobId: string): Buffer {
+  const filePath = path.join(MOCK_DIR, blobId)
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Mock blob not found: ${blobId}`)
+  }
+  return fs.readFileSync(filePath)
+}
+
+/**
+ * Upload data to Walrus with retry logic.
+ * Handles both "newlyCreated" and "alreadyCertified" response shapes.
+ * If MOCK_WALRUS is enabled, writes to local filesystem instead.
+ */
+export async function uploadToWalrus(data: Buffer, mimeType: string): Promise<WalrusUploadResult> {
+  if (MOCK) {
+    return mockUpload(data)
+  }
+
+  const url = `${PUBLISHER}/v1/store?epochs=${EPOCHS}`
+  const maxRetries = 3
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': mimeType,
+        },
+        body: data,
+      })
+
+      if (!response.ok) {
+        const errText = await response.text()
+        throw new Error(
+          `Walrus upload failed ${response.status}: ${errText.slice(0, 200)}`
+        )
+      }
+
+      const responseData = (await response.json()) as Record<string, unknown>
+
+      // Handle "newlyCreated" response shape
+      if ('newlyCreated' in responseData) {
+        const newlyCreated = responseData.newlyCreated as Record<string, unknown>
+        const blobObject = newlyCreated.blobObject as Record<string, string>
+        return {
+          blobId: blobObject.blobId,
+          suiObjectId: blobObject.id,
+          size: data.length,
+        }
+      }
+
+      // Handle "alreadyCertified" response shape
+      if ('alreadyCertified' in responseData) {
+        const alreadyCertified = responseData.alreadyCertified as Record<string, string>
+        return {
+          blobId: alreadyCertified.blobId,
+          suiObjectId: alreadyCertified.blobId,  // no object ID in this case
+          size: data.length,
+        }
+      }
+
+      throw new Error(
+        `Unexpected Walrus response shape: ${JSON.stringify(responseData).slice(0, 200)}`
+      )
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      // Don't retry on the last attempt
+      if (attempt < maxRetries - 1) {
+        const backoffMs = Math.pow(2, attempt) * 1000 // 1s, 2s
+        await sleep(backoffMs)
+      }
+    }
+  }
+
+  throw new Error(`Walrus upload failed after ${maxRetries} attempts: ${lastError?.message}`)
+}
+
+/**
+ * Retrieve data from Walrus using the aggregator.
+ * If MOCK_WALRUS is enabled, reads from local filesystem instead.
+ */
+export async function retrieveFromWalrus(blobId: string): Promise<Buffer> {
+  if (MOCK) {
+    return mockRetrieve(blobId)
+  }
+
+  const url = `${AGGREGATOR}/v1/${blobId}`
+
+  const response = await fetch(url, {
+    method: 'GET',
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Walrus retrieval failed with status ${response.status}: ${response.statusText}`
+    )
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
+
+/**
+ * Verify that a blob exists in Walrus using a HEAD request.
+ * If MOCK_WALRUS is enabled, checks local filesystem instead.
+ */
+export async function verifyBlobExists(blobId: string): Promise<boolean> {
+  if (MOCK) {
+    const filePath = path.join(MOCK_DIR, blobId)
+    return fs.existsSync(filePath)
+  }
+
+  const url = `${AGGREGATOR}/v1/${blobId}`
+
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+    })
+
+    return response.ok
+  } catch {
+    return false
+  }
+}
+import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
+import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
+import { execSync } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: path.join(__dirname, '../apps/api/.env') });
+
+async function main() {
+    const NETWORK = (process.env.SUI_NETWORK as 'testnet' | 'mainnet' | 'devnet') ?? 'testnet';
+
+    // 1. Read deployer keypair from environment variable (hex-encoded)
+    const hexKey = process.env.GREENPROOF_DEPLOYER_PRIVATE_KEY;
+    if (!hexKey) {
+        throw new Error('GREENPROOF_DEPLOYER_PRIVATE_KEY env var is not set');
+    }
+    const keypair = Ed25519Keypair.fromSecretKey(Buffer.from(hexKey, 'hex'));
+    const deployerAddress = keypair.getPublicKey().toSuiAddress();
+    console.log('Deploying from address:', deployerAddress);
+
+    // 2. Setup SUI testnet client
+    const client = new SuiClient({ url: getFullnodeUrl(NETWORK) });
+
+    // 3. Build Move contracts
+    console.log('Building Move contracts...');
+    const contractPath = path.join(__dirname, '../contracts');
+    const buildOutput = execSync(
+        `sui move build --dump-bytecode-as-base64 --path ${contractPath}`,
+        { encoding: 'utf-8' }
+    );
+    const { modules, dependencies } = JSON.parse(buildOutput);
+    console.log('Build successful.');
+
+    // 4. Publish the package
+    console.log('Publishing package to testnet...');
+    const publishTx = new TransactionBlock();
+    const [upgradeCap] = publishTx.publish({
+        modules,
+        dependencies,
+    });
+    publishTx.transferObjects([upgradeCap], publishTx.pure(deployerAddress));
+
+    const publishResult = await client.signAndExecuteTransactionBlock({
+        signer: keypair,
+        transactionBlock: publishTx,
+        options: {
+            showEffects: true,
+            showObjectChanges: true,
+        },
+    });
+
+    const deployTxHash = publishResult.digest;
+    console.log('Publish tx digest:', deployTxHash);
+
+    // 5. Extract packageId and adminCapId from objectChanges
+    const objectChanges = publishResult.objectChanges ?? [];
+
+    const publishedChange = objectChanges.find(
+        (c) => c.type === 'published'
+    );
+    if (!publishedChange || publishedChange.type !== 'published') {
+        throw new Error('Could not find published package in objectChanges');
+    }
+    const packageId = publishedChange.packageId;
+    console.log('Package ID:', packageId);
+
+    const adminCapChange = objectChanges.find(
+        (c) =>
+            c.type === 'created' &&
+            c.objectType?.includes('GreenproofAdminCap')
+    );
+    if (!adminCapChange || adminCapChange.type !== 'created') {
+        throw new Error('Could not find GreenproofAdminCap in objectChanges');
+    }
+    const adminCapId = adminCapChange.objectId;
+    console.log('AdminCap ID:', adminCapId);
+
+    // 6. Call create_company_token for demo company
+    console.log('Creating company token for PT Nusantara Agro Lestari...');
+    const tokenTx = new TransactionBlock();
+    const [treasuryCap] = tokenTx.moveCall({
+        target: `${packageId}::validator_token::create_company_token`,
+        arguments: [
+            tokenTx.object(adminCapId),
+            tokenTx.pure('demo-company-001'),
+            tokenTx.pure('PT Nusantara Agro Lestari'),
+            tokenTx.pure('PTPN'),
+        ],
+    });
+    tokenTx.transferObjects([treasuryCap], tokenTx.pure(deployerAddress));
+
+    const tokenResult = await client.signAndExecuteTransactionBlock({
+        signer: keypair,
+        transactionBlock: tokenTx,
+        options: {
+            showEffects: true,
+            showObjectChanges: true,
+        },
+    });
+
+    const tokenTxHash = tokenResult.digest;
+    console.log('Token tx digest:', tokenTxHash);
+
+    const tokenObjectChanges = tokenResult.objectChanges ?? [];
+    const treasuryCapChange = tokenObjectChanges.find(
+        (c) =>
+            c.type === 'created' &&
+            c.objectType?.includes('CompanyTreasuryCap')
+    );
+    if (!treasuryCapChange || treasuryCapChange.type !== 'created') {
+        throw new Error('Could not find CompanyTreasuryCap in objectChanges');
+    }
+    const treasuryCapId = treasuryCapChange.objectId;
+    console.log('TreasuryCap ID:', treasuryCapId);
+
+    // 7. Call create_registry for demo company
+    console.log('Creating task registry for demo company...');
+    const registryTx = new TransactionBlock();
+    const [registry] = registryTx.moveCall({
+        target: `${packageId}::task_registry::create_registry`,
+        arguments: [
+            registryTx.pure('demo-company-001'),
+        ],
+    });
+    registryTx.transferObjects([registry], registryTx.pure(deployerAddress));
+
+    const registryResult = await client.signAndExecuteTransactionBlock({
+        signer: keypair,
+        transactionBlock: registryTx,
+        options: {
+            showEffects: true,
+            showObjectChanges: true,
+        },
+    });
+
+    const registryTxHash = registryResult.digest;
+    console.log('Registry tx digest:', registryTxHash);
+
+    const registryObjectChanges = registryResult.objectChanges ?? [];
+    const registryChange = registryObjectChanges.find(
+        (c) =>
+            c.type === 'created' &&
+            c.objectType?.includes('TaskRegistry')
+    );
+    if (!registryChange || registryChange.type !== 'created') {
+        throw new Error('Could not find TaskRegistry in objectChanges');
+    }
+    const registryId = registryChange.objectId;
+    console.log('Registry ID:', registryId);
+
+    // 8. Write deployed.json
+    const deployed = {
+        network: NETWORK,
+        packageId,
+        adminCapId,
+        deployTxHash,
+        demoCompany: {
+            id: 'demo-company-001',
+            name: 'PT Nusantara Agro Lestari',
+            symbol: 'PTPN',
+            treasuryCapId,
+            registryId,
+            tokenTxHash,
+            registryTxHash,
+        },
+    };
+
+    const outputPath = path.join(__dirname, '../contracts/deployed.json');
+    fs.writeFileSync(outputPath, JSON.stringify(deployed, null, 2));
+    console.log('\ndeployed.json written to:', outputPath);
+    console.log(JSON.stringify(deployed, null, 2));
+}
+
+main().catch((err) => {
+    console.error('Deploy failed:', err);
+    process.exit(1);
+});
+import { PrismaClient } from '@greenproof/db'
+import * as fs from 'fs'
+import * as path from 'path'
+import * as dotenv from 'dotenv'
+
+dotenv.config({ path: path.join(__dirname, '../apps/api/.env') })
+
+const prisma = new PrismaClient()
+const DEPLOYED = path.join(__dirname, '../contracts/deployed.json')
+
+async function main() {
+  const deployed = fs.existsSync(DEPLOYED)
+    ? (JSON.parse(fs.readFileSync(DEPLOYED, 'utf8')) as {
+        packageId?: string
+        demoCompany?: { treasuryCapId?: string; registryId?: string }
+      })
+    : null
+
+  const company = await prisma.company.upsert({
+    where: { id: 'demo-company-001' },
+    update: {},
+    create: {
+      id: 'demo-company-001',
+      name: 'PT Nusantara Agro Lestari',
+      tokenName: 'PTPN GreenProof Token',
+      tokenSymbol: 'PTPN',
+      subscriptionTier: 'growth',
+      aiMode: 'greenproof',
+      contractAddress: deployed?.packageId,
+      treasuryCapId: deployed?.demoCompany?.treasuryCapId,
+      taskRegistryId: deployed?.demoCompany?.registryId,
+      sealPolicyId: `seal-demo-${Date.now()}`,
+    },
+  })
+  console.log('Company:', company.id)
+
+  const validators = [
+    { name: 'Pak Surya', level: 3, suiAddress: '0x1111111111111111111111111111111111111111111111111111111111111111' },
+    { name: 'Bu Dewi', level: 2, suiAddress: '0x2222222222222222222222222222222222222222222222222222222222222222' },
+    { name: 'Agus Mulyono', level: 2, suiAddress: '0x3333333333333333333333333333333333333333333333333333333333333333' },
+    { name: 'Wahyu Santoso', level: 1, suiAddress: '0x4444444444444444444444444444444444444444444444444444444444444444' },
+    { name: 'Fitri Handayani', level: 1, suiAddress: '0x5555555555555555555555555555555555555555555555555555555555555555' },
+  ]
+
+  for (const v of validators) {
+    await prisma.validator.upsert({
+      where: { suiAddress: v.suiAddress },
+      update: {},
+      create: { companyId: company.id, ...v },
+    })
+  }
+  console.log('Validators seeded:', validators.length)
+
+  const tasks = [
+    {
+      id: 'TK-2847',
+      title: 'Deteksi Ganoderma — Blok KB-C3',
+      type: 'ANOMALY_CRITICAL',
+      lat: -2.1847,
+      lng: 114.2341,
+      blok: 'KB-C3',
+      estate: 'Kapuas Barat',
+      rewardTokens: 150,
+      requiredLevel: 3,
+      status: 'COMPLETED',
+    },
+    {
+      id: 'TK-2848',
+      title: 'Hitung Pohon — Blok KB-D1',
+      type: 'TREE_COUNT',
+      lat: -2.192,
+      lng: 114.24,
+      blok: 'KB-D1',
+      estate: 'Kapuas Barat',
+      rewardTokens: 50,
+      requiredLevel: 1,
+      status: 'COMPLETED',
+    },
+    {
+      id: 'TK-2849',
+      title: 'Kondisi Umum Area — Blok KB-D2',
+      type: 'AREA_CONDITION',
+      lat: -2.201,
+      lng: 114.251,
+      blok: 'KB-D2',
+      estate: 'Kapuas Barat',
+      rewardTokens: 75,
+      requiredLevel: 1,
+      status: 'FLAGGED',
+    },
+    {
+      id: 'TK-2850',
+      title: 'Diagnosis Kesehatan — Blok KT-A1',
+      type: 'HEALTH_DIAGNOSIS',
+      lat: -2.45,
+      lng: 114.81,
+      blok: 'KT-A1',
+      estate: 'Kapuas Timur',
+      rewardTokens: 80,
+      requiredLevel: 2,
+      status: 'COMPLETED',
+    },
+    {
+      id: 'TK-2851',
+      title: 'Anomali Semi-Kritis — Blok KT-B3',
+      type: 'ANOMALY_SEMI',
+      lat: -2.48,
+      lng: 114.84,
+      blok: 'KT-B3',
+      estate: 'Kapuas Timur',
+      rewardTokens: 200,
+      requiredLevel: 2,
+      status: 'IN_PROGRESS',
+    },
+    {
+      id: 'TK-2852',
+      title: 'Estimasi Serangan Hama — Blok MT-C2',
+      type: 'ANOMALY_SEMI',
+      lat: -3.12,
+      lng: 116.21,
+      blok: 'MT-C2',
+      estate: 'Mentaya',
+      rewardTokens: 120,
+      requiredLevel: 2,
+      status: 'PUBLISHED',
+    },
+    {
+      id: 'TK-2853',
+      title: 'Estimasi Serangan Hama — Blok KB-C3',
+      type: 'ANOMALY_SEMI',
+      lat: -2.185,
+      lng: 114.235,
+      blok: 'KB-C3',
+      estate: 'Kapuas Barat',
+      rewardTokens: 120,
+      requiredLevel: 2,
+      status: 'PUBLISHED',
+    },
+  ]
+
+  for (const t of tasks) {
+    await prisma.task.upsert({
+      where: { id: t.id },
+      update: {},
+      create: {
+        id: t.id,
+        companyId: company.id,
+        title: t.title,
+        type: t.type as any,
+        lat: t.lat,
+        lng: t.lng,
+        blok: t.blok,
+        estate: t.estate,
+        rewardTokens: t.rewardTokens,
+        requiredLevel: t.requiredLevel,
+        status: t.status as any,
+        coordinates: { lat: t.lat, lng: t.lng },
+        anomalySource: 'manual',
+        description: '',
+      },
+    })
+  }
+  console.log('Tasks seeded:', tasks.length)
+
+  console.log('Seed complete.')
+}
+
+main()
+  .catch(err => {
+    console.error(err)
+    process.exit(1)
+  })
+  .finally(() => prisma.$disconnect())
+import jwt from 'jsonwebtoken'
+import 'dotenv/config'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
+
+const payload = {
+  userId: 'test-user-id',
+  companyId: 'test-company-id',
+  role: 'OPERATOR',
+  suiAddress: '0x123...test'
+}
+
+const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
+
+console.log('--- TEST JWT GENERATED ---')
+console.log(token)
+console.log('---------------------------')
+console.log('Usage example:')
+console.log(`curl -H "Authorization: Bearer ${token}" http://localhost:3001/api/v1/tasks`)
+# GreenProof Backend MVP — Development Summary
+
+## What Was Built
+
+This document describes every file created or modified during the backend MVP implementation sprint.
+
+---
+
+## 1. Smart Contracts (SUI Move)
+
+### `contracts/sources/task_registry.move` — Bug Fix
+**Fix:** Added missing `const E_INSUFFICIENT_BALANCE: u64 = 4;` to the error constants block.
+The constant was referenced on line ~70 (`validator_token::value(&coin) == reward_amount`) but never declared, causing a compile failure.
+
+**Error constants block after fix:**
+```move
+const E_NOT_AUTHORIZED: u64 = 1;
+const E_INVALID_STATUS: u64 = 2;
+const E_INSUFFICIENT_LEVEL: u64 = 3;
+const E_INSUFFICIENT_BALANCE: u64 = 4;
+```
+
+**Existing contracts (unchanged, already implemented):**
+- `contracts/sources/validator_token.move` — `GreenproofAdminCap`, `CompanyTreasuryCap`, `CompanyToken`; mint/split/join/burn operations
+- `contracts/sources/reward_engine.move` — `ValidatorReputation`; accuracy scoring, auto-promotion at L1→L2 (50 tasks, 75% accuracy) and L2→L3 (200 tasks, 85% accuracy)
+- `contracts/sources/task_registry.move` — `TaskRegistry`, `Task`, `Submission`; claim/submit/release/flag flow
+
+---
+
+## 2. Database Schema (Prisma)
+
+### `packages/db/prisma/schema.prisma` — Additive Migration Only
+
+**New fields added to `Company`:**
+| Field | Type | Purpose |
+|-------|------|---------|
+| `tokenSymbol` | `String?` | e.g. "PTPN" |
+| `tokenName` | `String?` | e.g. "PTPN GreenProof Token" |
+| `contractAddress` | `String?` | SUI package ID |
+| `treasuryCapId` | `String?` | CompanyTreasuryCap object ID on-chain |
+| `taskRegistryId` | `String?` | TaskRegistry object ID on-chain |
+
+**New fields added to `Task`:**
+| Field | Type | Purpose |
+|-------|------|---------|
+| `suiTaskId` | `String? @unique` | Canonical on-chain Task object ID |
+| `lat` / `lng` | `Float?` | GPS coordinates |
+| `blok` | `String?` | Block identifier (e.g. "KB-C3") |
+| `estate` | `String?` | Estate name (e.g. "Kapuas Barat") |
+| `txHash` | `String?` | On-chain publish transaction digest |
+| `createdByUserId` | `String?` | User who created the task |
+
+**New models:**
+
+`Validator` — Field partner registered per company
+```
+id, companyId, name, phone?, suiAddress? @unique, level (1-3), isActive, createdAt
+```
+
+`SealAccessLog` — Audit trail for Seal policy grants/revokes
+```
+id, companyId, policyId, grantedTo, action (GRANT|REVOKE), service?, blobCount, purpose?, createdAt
+```
+
+`AuditLog` — General audit trail for all significant actions
+```
+id, companyId?, actorId?, actorName?, action, entityType, entityId?, estate?, txHash?, metadata Json?, createdAt
+```
+
+**Migration file:** `packages/db/prisma/migrations/20260326000000_add_blockchain_fields/migration.sql`
+All `ALTER TABLE` statements use `IF NOT EXISTS`. FK constraints wrapped in idempotent `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;` blocks.
+
+---
+
+## 3. packages/sui-client
+
+### `packages/sui-client/src/walrus.ts` — NEW
+Walrus decentralized storage HTTP client.
+
+**Exports:**
+- `uploadToWalrus(data: Buffer, mimeType: string): Promise<WalrusUploadResult>` — PUT to publisher, handles both `newlyCreated` and `alreadyCertified` response shapes, 3 retries with 1s/2s backoff
+- `retrieveFromWalrus(blobId: string): Promise<Buffer>` — GET from aggregator
+- `verifyBlobExists(blobId: string): Promise<boolean>` — HEAD check
+
+**Mock mode:** Set `MOCK_WALRUS=true` to write/read blobs from `/tmp/greenproof-walrus/` (no network needed for dev/test).
+
+**Env vars:**
+```
+WALRUS_PUBLISHER_URL  (default: https://publisher.walrus-testnet.walrus.space)
+WALRUS_AGGREGATOR_URL (default: https://aggregator.walrus-testnet.walrus.space)
+WALRUS_EPOCHS         (default: 5)
+MOCK_WALRUS           (default: false)
+```
+
+### `packages/sui-client/src/seal.ts` — NEW
+Seal access control HTTP abstraction. There is no `@mysten/seal` npm package; this is a custom HTTP client that falls back to mock when `SEAL_SERVICE_URL` is unset.
+
+**Exports:**
+- `createSealPolicy(ownerAddresses: string[]): Promise<{ policyId: string }>`
+- `grantSealAccess(policyId, address): Promise<void>`
+- `revokeSealAccess(policyId, address): Promise<void>`
+- `getSealAccessLog(policyId): Promise<Array<{address, grantedAt}>>`
+- `encryptForPolicy(data: Buffer, policyId: string): Promise<Buffer>`
+- `decryptFromPolicy(data: Buffer, policyId: string): Promise<Buffer>`
+
+**Mock mode:** Automatically active when `SEAL_SERVICE_URL` is unset or `MOCK_SEAL=true`. Mock encrypt/decrypt are identity operations (data passes through unchanged).
+
+### `packages/sui-client/src/index.ts` — Updated
+Added `export * from './walrus'` and `export * from './seal'`.
+
+---
+
+## 4. apps/api — Services
+
+### `apps/api/src/lib/prisma.ts` — NEW
+Prisma singleton to avoid multiple connection pools.
+```typescript
+export const prisma: PrismaClient = new PrismaClient()
+```
+
+### `apps/api/src/services/sui.service.ts` — NEW
+Wraps all SUI Move contract calls using `@mysten/sui.js@0.54.1` (TransactionBlock API).
+
+**Key design decisions:**
+- Module-level lazy singletons for `SuiClient` and `Ed25519Keypair` (created once on first use)
+- All deployer-signed transactions use `signAndExecuteTransactionBlock`
+- Sponsored transactions (claim, submit) use dual-signature pattern: validator signs intent, deployer signs as gas owner
+- Coordinates encoded as `Array.from(Buffer.from(JSON.stringify({ lat, lng })))` for Move `vector<u8>`
+
+**Exported functions:**
+| Function | Move call | Returns |
+|----------|-----------|---------|
+| `createCompanyToken(params)` | `validator_token::create_company_token` | `{ treasuryCapId, txHash }` |
+| `createTaskRegistry(companyId)` | `task_registry::create_registry` | `{ registryId, txHash }` |
+| `createOnChainTask(params)` | mint + `task_registry::create_task` (single PTB) | `{ suiTaskId, txHash }` |
+| `claimTask(params)` | `task_registry::claim_task` (sponsored) | `{ txHash }` |
+| `submitValidationOnChain(params)` | `task_registry::submit_validation` (sponsored) | `{ txHash }` |
+| `releaseReward(params)` | `task_registry::release_reward` + transferObjects | `{ txHash }` |
+| `flagTaskOnChain(suiTaskId, reason)` | `task_registry::flag_task` | `{ txHash }` |
+| `createReputation(params)` | `reward_engine::create_reputation` | `{ reputationId, txHash }` |
+| `validateSuiEnv()` | — | throws if env vars missing |
+
+### `apps/api/src/services/walrus.service.ts` — NEW
+Thin wrapper around `@greenproof/sui-client` walrus functions:
+- `uploadPhoto(buffer, mimeType)` → `WalrusUploadResult`
+- `fetchPhoto(blobId)` → `Buffer`
+- `blobExists(blobId)` → `boolean`
+
+### `apps/api/src/services/seal.service.ts` — NEW
+- `provisionCompanyPolicy(params)` — creates Seal policy with company + contract + optional AI service addresses; writes `SealAccessLog` row
+- `toggleAiAccess(params)` — grants/revokes AI service address on Seal policy; writes `SealAccessLog` row
+- `encryptPhoto(data, policyId)` — wraps `encryptForPolicy`
+
+### `apps/api/src/services/token.service.ts` — NEW
+- `calculateReward(baseAmount, validatorLevel)` — applies multiplier from `@greenproof/shared` (L1=1x, L2=1.5x, L3=2x)
+
+### `apps/api/src/services/llm.service.ts` — NEW
+Uses `@anthropic-ai/sdk`. Client is initialized lazily (not at module load) so `MOCK_LLM=true` never requires `ANTHROPIC_API_KEY`.
+
+**`runQualityGate(params)`** — Vision QC using `claude-3-5-sonnet-20240620`
+- Accepts up to 3 base64 photos + diagnosis text + GPS distance
+- Returns `QualityGateResult`: `{ qualityScore, isConsistent, hasRelevantContent, flags, reasoning, recommendedAction }`
+- `recommendedAction`: `APPROVE` | `FLAG_FOR_REVIEW` | `REJECT`
+- Flags: `GPS_TOO_FAR` | `PHOTO_IRRELEVANT` | `DIAGNOSIS_INCONSISTENT` | `INCOMPLETE_COVERAGE`
+
+**`simulateAnomalies(params)`** — Drone anomaly simulation using `claude-3-haiku-20240307`
+- Generates `count` realistic palm oil anomaly detections for a given estate + block list
+- Returns `DroneAnomaly[]`: `{ anomalyType, severity, lat, lng, description, suggestedTaskType, confidence }`
+
+---
+
+## 5. apps/api — Middleware
+
+### `apps/api/src/middleware/auth.ts` — NEW
+- `requireAuth` — validates `Authorization: Bearer <jwt>`, attaches decoded payload to `req.auth`
+- `requireRole(...roles)` — factory, returns middleware that 403s if `req.auth.role` not in list
+- `issueToken(payload)` — signs JWT with `JWT_SECRET` (falls back to `'dev-secret-change-me'` if unset)
+- `AuthPayload` type: `{ userId, companyId?, role, suiAddress? }`
+
+### `apps/api/src/middleware/error.ts` — NEW
+Global Express error handler (must be last `app.use()`).
+- `ZodError` → 400 with per-field details
+- `PrismaClientKnownRequestError P2025` → 404
+- `PrismaClientKnownRequestError P2002` → 409 (duplicate)
+- Everything else → 500 (stack trace shown only in `NODE_ENV=development`)
+
+---
+
+## 6. apps/api — Routes
+
+### `apps/api/src/routes/onboarding.ts` — NEW
+Mounted at `/api/v1`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/onboarding/company` | None | Onboard company: SUI token + registry + Seal policy + DB row + JWT |
+| GET | `/me` | Required | Current user + company |
+
+**Onboarding flow:**
+1. Validate unique `tokenSymbol`
+2. `suiService.createCompanyToken` — creates `CompanyTreasuryCap` on-chain
+3. `suiService.createTaskRegistry` — creates `TaskRegistry` shared object
+4. `sealService.provisionCompanyPolicy` — non-blocking (failure is logged, not fatal)
+5. `prisma.company.create` + `prisma.user.create` (OPERATOR role)
+6. `prisma.auditLog.create`
+7. Return JWT + all IDs
+
+### `apps/api/src/routes/tasks.ts` — NEW
+Mounted at `/api/v1/tasks` (all endpoints require auth)
+
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/` | Any | Paginated list (filters: status, estate, search) |
+| GET | `/:id` | Any | Task detail with submissions |
+| POST | `/` | OPERATOR, SUPERVISOR | Create task (DRAFT or publish immediately) |
+| PATCH | `/:id/publish` | OPERATOR | Publish DRAFT task on-chain |
+| PATCH | `/:id/claim` | Any | Claim task (sets IN_PROGRESS) |
+
+### `apps/api/src/routes/submissions.ts` — NEW
+Mounted at `/api/v1`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/tasks/:id/submit` | Required | Submit photo evidence (multipart/form-data) |
+| GET | `/submissions/:id` | Required | Submission detail |
+
+**Submit flow:**
+1. GPS distance check (max `GPS_MAX_DISTANCE_M` from task center)
+2. Seal-encrypt each photo (if company has `sealPolicyId`)
+3. Upload each photo to Walrus
+4. Submit first blob on-chain via `suiService.submitValidationOnChain`
+5. Save `Submission` row (status: `PENDING`)
+6. `setImmediate(() => runAsyncQc(submissionId))` — non-blocking
+7. Return 201 with `submissionId + blobIds + txHash`
+
+**Async QC (`runAsyncQc`):**
+- Sets status → `LLM_CHECKING`
+- Fetches up to 3 photos from Walrus
+- Calls `llmService.runQualityGate`
+- `APPROVE` → `releaseReward` on-chain → `VERIFIED` + `COMPLETED` + AuditLog
+- `FLAG_FOR_REVIEW` → `flagTaskOnChain` → `FLAGGED` + AuditLog
+- `REJECT` → `REJECTED`
+- Error → resets to `PENDING`
+
+### `apps/api/src/routes/validators.ts` — NEW
+Mounted at `/api/v1/validators`
+
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/` | Any | List validators for company |
+| POST | `/` | OPERATOR | Create validator (+ optional on-chain reputation) |
+| PATCH | `/:id` | OPERATOR | Update level / isActive |
+
+### `apps/api/src/routes/simulator.ts` — NEW
+Mounted at `/api/v1/simulator`
+
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| POST | `/generate` | OPERATOR, SUPERVISOR | LLM generates anomaly list → AnomalyLog |
+| POST | `/create-tasks` | OPERATOR, SUPERVISOR | Convert AnomalyLog → DRAFT Tasks |
+
+### `apps/api/src/routes/treasury.ts` — NEW
+Mounted at `/api/v1/treasury`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/` | Required | Token summary: distributed total, locked in escrow, recent transactions |
+
+### `apps/api/src/routes/audit.ts` — NEW
+Mounted at `/api/v1/audit`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/` | Required | Paginated AuditLog (filter: type, estate) |
+| GET | `/seal` | Required | SealAccessLog for company |
+
+### `apps/api/src/routes/config.ts` — NEW
+Mounted at `/api/v1/config`
+
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/` | Any | Company AI mode + Seal policy info |
+| PATCH | `/ai-mode` | OPERATOR | Toggle AI mode A/B (updates Seal grant) |
+
+### `apps/api/src/routes/verifier.ts` — NEW
+Mounted at `/api/v1/verifier`
+
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/queue` | AGRONOMIS, SUPERVISOR, OPERATOR | Flagged submissions without verdict |
+| POST | `/verdict` | AGRONOMIS, SUPERVISOR, OPERATOR | Submit verdict (CONFIRMED/REJECTED/INCONCLUSIVE) |
+
+**Verdict flow:**
+- `CONFIRMED` → `releaseReward` on-chain → submission `REWARDED` → task `COMPLETED`
+- `REJECTED` → submission `REJECTED` → task back to `PUBLISHED`
+- Either → writes AuditLog
+
+### `apps/api/src/app.ts` — Updated
+Mounts all routers in correct order. `errorHandler` is last.
+
+```
+GET  /health
+POST /api/v1/onboarding/company
+GET  /api/v1/me
+GET  /api/v1/tasks
+POST /api/v1/tasks
+...
+POST /api/v1/tasks/:id/submit
+GET  /api/v1/submissions/:id
+GET  /api/v1/validators
+POST /api/v1/validators
+...
+POST /api/v1/simulator/generate
+POST /api/v1/simulator/create-tasks
+GET  /api/v1/treasury
+GET  /api/v1/audit
+GET  /api/v1/audit/seal
+GET  /api/v1/config
+PATCH /api/v1/config/ai-mode
+GET  /api/v1/verifier/queue
+POST /api/v1/verifier/verdict
+```
+
+---
+
+## 7. Scripts
+
+### `scripts/deploy.ts` — Rewritten
+Reads `GREENPROOF_DEPLOYER_PRIVATE_KEY` from `apps/api/.env`. Steps:
+1. Build contracts via `sui move build --dump-bytecode-as-base64`
+2. Publish package → extract `packageId` + `adminCapId`
+3. Call `create_company_token` for demo company "PT Nusantara Agro Lestari" / "PTPN"
+4. Call `create_registry` for demo company
+5. Write `contracts/deployed.json` with all object IDs
+
+### `scripts/seed.ts` — NEW
+Seeds demo data. Reads `contracts/deployed.json` if available to populate on-chain IDs.
+- 1 company: PT Nusantara Agro Lestari (PTPN)
+- 5 validators: 1× L3, 2× L2, 2× L1
+- 7 tasks across 3 estates (Kapuas Barat, Kapuas Timur, Mentaya) in various statuses
+
+### `apps/api/.env.example` — NEW
+Template for all required environment variables with comments.
+
+### `scripts/README.md` — Updated
+Curl examples for all main API flows.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GREENPROOF_DEPLOYER_PRIVATE_KEY` | Yes (deploy) | Hex-encoded Ed25519 private key |
+| `GREENPROOF_PACKAGE_ID` | Yes (API) | Set after deploy |
+| `GREENPROOF_ADMIN_CAP_ID` | Yes (API) | Set after deploy |
+| `GREENPROOF_SERVICE_ADDRESS` | Optional | Deployer SUI address |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | JWT signing secret |
+| `ANTHROPIC_API_KEY` | Yes (if `MOCK_LLM=false`) | Anthropic API key |
+| `WALRUS_PUBLISHER_URL` | No | Defaults to testnet |
+| `WALRUS_AGGREGATOR_URL` | No | Defaults to testnet |
+| `MOCK_WALRUS` | No | `true` = use local filesystem |
+| `SEAL_SERVICE_URL` | No | Unset = mock mode |
+| `MOCK_SEAL` | No | `true` = force mock |
+| `MOCK_LLM` | No | `true` = skip Anthropic calls |
+
+---
+
+## Quick Start
+
+```bash
+# 1. Copy and fill env file
+cp apps/api/.env.example apps/api/.env
+
+# 2. Install dependencies
+pnpm install
+
+# 3. Run DB migration
+pnpm db:migrate
+
+# 4. Generate Prisma client
+pnpm db:generate
+
+# 5. Seed demo data (optional)
+npx tsx scripts/seed.ts
+
+# 6. Start API (all mocks enabled)
+MOCK_WALRUS=true MOCK_SEAL=true MOCK_LLM=true pnpm --filter @greenproof/api dev
+
+# 7. Health check
+curl http://localhost:3001/health
+
+# 8. To deploy contracts to testnet (requires wallet key)
+npx tsx scripts/deploy.ts
+```
+
+---
+
+## Architecture Decisions
+
+**Why no `@mysten/seal` package?**
+No such npm package exists. Seal is implemented as a custom HTTP client pointing to `SEAL_SERVICE_URL`. All functions gracefully mock when the URL is unset.
+
+**Why `setImmediate` for LLM QC?**
+Fire-and-forget async QC keeps the submission endpoint fast (< 2s response). A message queue (Bull, SQS) would be more robust but is out of scope for MVP.
+
+**Why deployer key as proxy for sponsored transactions?**
+For MVP, the backend holds the deployer key and sponsors all transactions. In production, each validator would have an ephemeral session keypair generated server-side at login (zkLogin integration).
+
+**Why `@mysten/sui.js@0.54.1` not newer `@mysten/sui`?**
+The monorepo already pins this version. `TransactionBlock` (not `Transaction`) and `signAndExecuteTransactionBlock` (not `signAndExecuteTransaction`) are the correct APIs for this version.
