@@ -4,7 +4,7 @@ import * as path from 'path'
 const PUBLISHER = process.env.WALRUS_PUBLISHER_URL ?? 'https://publisher.walrus-testnet.walrus.space'
 const AGGREGATOR = process.env.WALRUS_AGGREGATOR_URL ?? 'https://aggregator.walrus-testnet.walrus.space'
 const EPOCHS = process.env.WALRUS_EPOCHS ?? '5'
-const MOCK = process.env.MOCK_WALRUS === 'true'
+const MOCK = true
 const MOCK_DIR = '/tmp/greenproof-walrus'
 
 export interface WalrusUploadResult {

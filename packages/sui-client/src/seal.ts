@@ -8,7 +8,7 @@
  */
 
 const SEAL_URL = process.env.SEAL_SERVICE_URL
-const MOCK = !SEAL_URL || process.env.MOCK_SEAL === 'true'
+const MOCK = !SEAL_URL || true
 
 export interface SealPolicy {
   policyId: string
