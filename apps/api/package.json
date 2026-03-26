@@ -7,7 +7,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:token": "tsx scripts/generate-test-token.ts"
   },
   "dependencies": {
     "@greenproof/db": "workspace:*",
@@ -30,6 +32,9 @@
     "@types/node": "^20",
     "eslint": "^8",
     "tsx": "^4.10.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2"
   }
 }

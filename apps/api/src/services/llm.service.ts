@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { QualityGateResult, DroneAnomaly } from '@greenproof/shared'
 
-const MOCK_LLM = process.env.MOCK_LLM === 'true'
+const MOCK_LLM = true
 
 let _anthropicClient: Anthropic | undefined
 
