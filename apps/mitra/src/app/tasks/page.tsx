@@ -14,7 +14,7 @@ export default function TasksPage() {
       {/* Header & Map Mock Component */}
       <div className="relative h-64 bg-card shrink-0 shadow-md border-b border-border">
         {/* Mock Map Background */}
-        <div className="absolute inset-0 opacity-40 bg-[url('https://picsum.photos/seed/mapbg/800/600')] bg-cover bg-center" />
+        <div className="absolute inset-0 opacity-40 bg-[url('/images/map-bg.jpg')] bg-cover bg-center" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         
         {/* Floating User Location Pin */}

@@ -35,7 +35,7 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
 
       {/* Hero Image (Drone Capture) */}
       <div className="h-64 relative bg-black shrink-0">
-        <img src="https://picsum.photos/seed/dronecap/800/600" alt="Pandangan Drone" className="w-full h-full object-cover opacity-80" />
+        <img src="/images/task-hero.jpg" alt="Pandangan Drone" className="w-full h-full object-cover opacity-80" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
         
         {/* Absolute floating details */}

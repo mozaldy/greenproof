@@ -11,7 +11,7 @@ export default function Home() {
         
         <div className="flex items-center gap-4 relative z-10">
           <div className="w-14 h-14 rounded-full border-2 border-primary overflow-hidden shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-            <img src="https://picsum.photos/seed/agus/150/150" alt="Agus Mulyono" className="w-full h-full object-cover" />
+            <img src="/images/avatar-agus.webp" alt="Agus Mulyono" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1">
             <h1 className="text-xl font-bold text-foreground leading-tight">Agus Mulyono</h1>

@@ -30,7 +30,7 @@ export default function ProfilePage() {
              </div>
           </div>
           <div className="w-24 h-24 rounded-full border-4 border-background shadow-[0_0_0_2px_var(--primary)] overflow-hidden mb-4 mt-2">
-            <img src="https://picsum.photos/seed/agus/200/200" alt="Agus Mulyono" className="w-full h-full object-cover" />
+            <img src="/images/avatar-agus.webp" alt="Agus Mulyono" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-2xl font-bold">Agus Mulyono</h2>
           <p className="text-muted-foreground text-sm mb-4">Staff Agronomi</p>
@@ -57,7 +57,7 @@ export default function ProfilePage() {
            <div className="flex justify-between items-start mb-6">
              <div className="flex items-center gap-2 bg-black/20 backdrop-blur px-3 py-1.5 rounded-full border border-white/10">
                <Medal size={16} className="text-emerald-300" />
-               <span className="text-xs font-bold tracking-widest uppercase">Poin Internal</span>
+               <span className="text-xs font-bold tracking-widest uppercase">Poin</span>
              </div>
            </div>
 

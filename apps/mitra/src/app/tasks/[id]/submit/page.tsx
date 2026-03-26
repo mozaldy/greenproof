@@ -69,7 +69,7 @@ export default function SubmitReportPage({ params }: { params: { id: string } })
       {/* Camera Viewfinder Mock */}
       <div className="p-4">
          <div className="relative aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-border shadow-inner group">
-           <img src="https://picsum.photos/seed/camera_live/800/600" alt="Live Camera Preview" className="w-full h-full object-cover opacity-60" />
+           <img src="/images/camera-preview.avif" alt="Live Camera Preview" className="w-full h-full object-cover opacity-60" />
            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
              {/* Reticle focus lines */}
              <div className="w-32 h-32 border border-white/30 relative">
