@@ -29,12 +29,18 @@ services:
     volumes:
       - .:/app
     working_dir: /app
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://user:pass@db:5432/greenproof
+      - MOCK_LLM=true
+      - MOCK_WALRUS=true
+      - MOCK_SEAL=true
     ports:
       - "3000:3000"
       - "3001:3001"
       - "3002:3002"
       - "5555:5555"
-    command: sh -c "corepack enable pnpm && pnpm install && pnpm dev"
+    command: sh -c "apk add --no-cache openssl libc6-compat && corepack enable pnpm && pnpm install && pnpm dev"
 
 volumes:
   greenproof-db-data:
