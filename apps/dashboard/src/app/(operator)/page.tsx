@@ -28,8 +28,8 @@ export default function CommandCenterPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--bg-base)]">
-      
-      <PageHeader 
+
+      <PageHeader
         title="Drone Fleet Command Center"
         subtitle={`PT Nusantara Agro Lestari — ${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`}
         icon={ScanLine}
@@ -46,16 +46,11 @@ export default function CommandCenterPage() {
       {/* KPI Strip */}
       <KpiStrip />
 
-      {/* ── TREASURY WIDGET ── */}
-      <div className="px-6 py-4 border-b border-[var(--border)] bg-[var(--bg-base)]">
-        <TokenTreasuryWidget />
-      </div>
-
       <div className="flex-1 grid grid-cols-[1fr_340px] min-h-0">
-        
+
         {/* LEFT: Map */}
         <div className="flex flex-col border-r border-[var(--border)] relative min-h-0">
-           <DroneCommandMap />
+          <DroneCommandMap />
         </div>
 
         {/* RIGHT: Monitoring Panels */}
@@ -84,7 +79,7 @@ export default function CommandCenterPage() {
 
           <section>
             <div className="px-4 py-2.5 flex items-center justify-between bg-[var(--bg-surface)] border-b border-[var(--border)]">
-               <div className="flex items-center gap-2 font-bold text-xs text-[var(--text-primary)]"><AlertTriangle size={13} color="#f97316" /> Live Alert Feed</div>
+              <div className="flex items-center gap-2 font-bold text-xs text-[var(--text-primary)]"><AlertTriangle size={13} color="#f97316" /> Live Alert Feed</div>
             </div>
             <div className="divide-y divide-[var(--border-subtle)]">
               {ANOMALY_FEED.map(a => {
@@ -107,8 +102,16 @@ export default function CommandCenterPage() {
               })}
             </div>
           </section>
+
         </div>
+
       </div>
+
+      {/* ── TREASURY WIDGET ── */}
+      <div className="px-6 py-6 border-t border-[var(--border)] bg-[var(--bg-base)]">
+        <TokenTreasuryWidget />
+      </div>
+
     </div>
   )
 }

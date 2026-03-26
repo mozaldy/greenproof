@@ -90,7 +90,7 @@ function SubmissionCard({ sub, idx }: { sub: any; idx: number }) {
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 snap-x" style={{ scrollbarWidth: 'thin' }}>
                   {actualPhotos.map((photoName: string, pIdx: number) => {
-                    const imgUrl = `https://picsum.photos/seed/${photoName.replace('.jpg', '')}/600/400`;
+                    const imgUrl = `/images/field-evidence.jpg`;
                     return (
                       <div key={pIdx} onClick={() => setLightbox(imgUrl)} className="w-[180px] h-[120px] shrink-0 rounded-xl overflow-hidden bg-[var(--bg-surface)] border border-[var(--border)] snap-start shadow-sm relative group cursor-pointer">
                         <img src={imgUrl} alt={photoName} className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" />
@@ -219,9 +219,9 @@ export function TaskDetailDrawer({ taskId, onClose }: TaskDetailDrawerProps) {
   };
 
   const dronePhotos = [
-    `https://picsum.photos/seed/drone_1_${detail.id}/800/600`,
-    `https://picsum.photos/seed/drone_2_${detail.id}/800/600`,
-    `https://picsum.photos/seed/drone_3_${detail.id}/800/600`
+    `/images/drone-aerial-1.webp`,
+    `/images/drone-aerial-2.jpg`,
+    `/images/drone-aerial-3.jpg`,
   ]
 
   return (

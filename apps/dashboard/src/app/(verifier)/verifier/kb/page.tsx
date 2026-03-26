@@ -30,7 +30,7 @@ const KB_ITEMS: KbItem[] = [
               </ul>
             </div>
             <div className="w-full md:w-64 shrink-0 flex flex-col gap-2">
-               <img src="https://picsum.photos/seed/drillhole/400/300" alt="Luka Bor Tanda Injeksi Herbisisda" className="w-full h-32 object-cover rounded-lg border border-[var(--danger)] opacity-80" />
+               <img src="/images/sop-drillhole.jpg" alt="Luka Bor Tanda Injeksi Herbisisda" className="w-full h-32 object-cover rounded-lg border border-[var(--danger)] opacity-80" />
                <span className="text-[10px] uppercase font-bold text-[var(--danger)] mix-blend-color-burn text-center">Fig 1. Bukti Luka Bor pada Pangkal (Close-up)</span>
             </div>
           </div>
@@ -39,7 +39,7 @@ const KB_ITEMS: KbItem[] = [
         <h4 className="font-bold text-[15px] mb-3" style={{ color: 'var(--text-primary)' }}>Panduan Penanganan & Eskalasi Insiden (SOP-SEC-04):</h4>
         
         <div className="flex gap-4 mb-4">
-           <img src="https://picsum.photos/seed/wideview/600/200" alt="Panorama Kematian Sabotase" className="w-full h-40 object-cover rounded-xl border border-[var(--border)] opacity-90 shadow-sm" />
+           <img src="/images/sop-panorama.webp" alt="Panorama Kematian Sabotase" className="w-full h-40 object-cover rounded-xl border border-[var(--border)] opacity-90 shadow-sm" />
         </div>
         
         <ol className="list-decimal pl-5 space-y-3" style={{ color: 'var(--text-secondary)' }}>

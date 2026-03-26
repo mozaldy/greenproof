@@ -123,15 +123,15 @@ export default function HistoryPage() {
                         </h4>
                         <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
                            <div className="shrink-0 w-[240px] sm:w-[280px] h-[160px] sm:h-[180px] rounded-xl border shadow-sm overflow-hidden bg-black relative">
-                              <img src={`https://picsum.photos/seed/${row.id}_a/400/300`} className="w-full h-full object-cover opacity-90" alt="Bukti 1" />
+                              <img src={`/images/training-macro.jpg`} className="w-full h-full object-cover opacity-90" alt="Bukti 1" />
                               <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2 text-[10px] font-mono text-white tracking-widest uppercase">Tag: Anomali Makro</div>
                            </div>
                            <div className="shrink-0 w-[240px] sm:w-[280px] h-[160px] sm:h-[180px] rounded-xl border shadow-sm overflow-hidden bg-black relative">
-                              <img src={`https://picsum.photos/seed/${row.id}_b/400/300`} className="w-full h-full object-cover opacity-90" alt="Bukti 2" />
+                              <img src={`/images/training-micro.jpg`} className="w-full h-full object-cover opacity-90" alt="Bukti 2" />
                               <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2 text-[10px] font-mono text-white tracking-widest uppercase">Tag: Gejala Mikro</div>
                            </div>
                            <div className="shrink-0 w-[240px] sm:w-[280px] h-[160px] sm:h-[180px] rounded-xl border shadow-sm overflow-hidden bg-black relative">
-                              <img src={`https://picsum.photos/seed/${row.id}_c/400/300`} className="w-full h-full object-cover opacity-90 grayscale-[30%]" alt="Context" />
+                              <img src={`/images/training-context.webp`} className="w-full h-full object-cover opacity-90 grayscale-[30%]" alt="Context" />
                               <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2 text-[10px] font-mono text-white tracking-widest uppercase">Tag: Konteks Lingkungan</div>
                            </div>
                         </div>

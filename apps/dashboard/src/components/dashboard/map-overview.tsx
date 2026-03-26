@@ -20,8 +20,8 @@ const SATELLITE_STYLE = {
   layers: [{ id: 'satellite-base', type: 'raster', source: 'esri-satellite' }],
 } as any
 
-const BASE_LAT = 2.8797
-const BASE_LNG = 101.4886
+const BASE_LAT = -1.9200   // Central Kalimantan — deep plantation concession, no settlements
+const BASE_LNG = 113.6800
 
 // ─── Drone Fleet Positions ────────────────────────────────────────────────────
 const DRONES = [
@@ -166,8 +166,8 @@ export function MapOverview() {
         initialViewState={{
           longitude: BASE_LNG,
           latitude:  BASE_LAT + 0.004,
-          zoom:      13.5,
-          pitch:     30,
+          zoom:      14,
+          pitch:     60,
           bearing:   -20,
         }}
         mapStyle={SATELLITE_STYLE}

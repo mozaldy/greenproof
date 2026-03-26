@@ -117,7 +117,7 @@ export const TASK_DETAILS: Record<string, TaskDetail> = {
 export const VALIDATORS: ValidatorProfile[] = [
   { id: 'M-001', name: 'Pak Surya', walletAddress: '0x7a3f...e8f9', type: 'Internal', status: 'active', totalTasks: 347, tokenBalance: 42300, estate: 'Kapuas Barat', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=150' },
   { id: 'M-002', name: 'Bu Dewi', walletAddress: '0x9b2c...d1a4', type: 'Internal', status: 'active', totalTasks: 128, tokenBalance: 14890, estate: 'Kapuas Barat', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150' },
-  { id: 'M-003', name: 'Agus Mulyono', walletAddress: '0xDef4...d5e6', type: 'Eksternal', status: 'active', totalTasks: 95, tokenBalance: 8200, estate: 'Kapuas Timur', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150' },
+  { id: 'M-003', name: 'Agus Mulyono', walletAddress: '0xDef4...d5e6', type: 'Eksternal', status: 'active', totalTasks: 95, tokenBalance: 8200, estate: 'Kapuas Timur', avatar: '/images/avatar-agus.webp' },
   { id: 'M-004', name: 'Wahyu Santoso', walletAddress: '0xAb12...e2f3', type: 'Eksternal', status: 'active', totalTasks: 23, tokenBalance: 1150, estate: 'Kapuas Barat', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=150' },
 ]
 

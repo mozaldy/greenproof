@@ -29,9 +29,9 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
 
   // Generate multi-images untuk Drone (Simulasi beberapa frame tangkapan)
   const dronePhotos = [
-    `https://picsum.photos/seed/drone_1_${activeCase.caseId}/800/600`,
-    `https://picsum.photos/seed/drone_2_${activeCase.caseId}/800/600`,
-    `https://picsum.photos/seed/drone_3_${activeCase.caseId}/800/600`
+    `/images/drone-aerial-1.webp`,
+    `/images/drone-aerial-2.jpg`,
+    `/images/drone-aerial-3.jpg`,
   ]
 
   return (
@@ -198,7 +198,7 @@ export function EvidenceViewer({ activeCase, showForm, onOpenForm }: Props) {
                             </div>
                             <div className="flex gap-4 overflow-x-auto pb-2 snap-x" style={{ scrollbarWidth: 'thin' }}>
                               {actualPhotos.map((photoName, pIdx) => {
-                                const imgUrl = `https://picsum.photos/seed/${photoName.replace('.jpg', '')}/800/600`;
+                                const imgUrl = `/images/field-evidence.jpg`;
                                 return (
                                   <div 
                                     key={pIdx} 

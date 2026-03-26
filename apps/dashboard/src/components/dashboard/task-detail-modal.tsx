@@ -250,11 +250,11 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
                   <div className="relative rounded-lg overflow-hidden mb-2 " style={{ border: '1px solid var(--border)', aspectRatio: '16/9' }}>
                     <img 
                       src={
-                        taskId === 'TK-2847' 
-                          ? 'https://picsum.photos/seed/ganoderma/800/450' 
-                          : taskId === 'TK-2849' 
-                            ? 'https://picsum.photos/seed/klorosis/800/450' 
-                            : 'https://picsum.photos/seed/pests/800/450' 
+                        taskId === 'TK-2847'
+                          ? '/images/disease-ganoderma.jpg'
+                          : taskId === 'TK-2849'
+                            ? '/images/disease-chlorosis.jpg'
+                            : '/images/disease-pest.jpg'
                       } 
                       alt="Bukti Temuan" 
                       className="w-full h-full object-cover" 
