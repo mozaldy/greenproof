@@ -15,6 +15,12 @@ packages/db/prisma/migrations/
 # Mock Walrus storage
 /tmp/greenproof-photos/
 
+# TypeScript build info
+*.tsbuildinfo
+
+# pnpm store
+.pnpm-store/
+
 # OS
 .DS_Store
 *.pem
