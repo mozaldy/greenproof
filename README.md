@@ -1,5 +1,7 @@
 # GreenProof
 
+# Made by mozaldy
+
 ## Ground Truth Validation Network for Global Agriculture
 
 ### Overview
